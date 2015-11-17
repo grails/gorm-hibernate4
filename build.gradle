@@ -64,26 +64,6 @@ dependencies {
     testCompile "org.hibernate:hibernate-ehcache:$hibVersion"
 
     provided "javax.servlet:javax.servlet-api:$servletApiVersion"
-    def excludes = {
-        exclude group:"org.grails",module: "grails-plugin-url-mappings"
-        exclude group:"org.grails",module: "grails-plugin-servlets"
-        exclude group:"org.grails",module: "grails-plugin-controllers"
-        exclude group:"org.grails",module: "grails-plugin-interceptors"
-        exclude group:"org.grails",module: "grails-plugin-domain-class"
-        exclude group:"org.grails",module: "grails-plugin-gsp"
-        exclude group:"org.grails",module: "grails-plugin-filters"
-        exclude group:"org.grails",module: "grails-plugin-mimetypes"
-        exclude group:"org.grails",module: "grails-plugin-converters"
-        exclude group:"org.grails",module: "grails-logging"
-        exclude group:"org.grails",module: "grails-test"
-        exclude group:"org.grails",module: "grails-datastore-gorm"
-        exclude group:"org.grails",module: "grails-datastore-core"
-        exclude group:"org.grails",module: "grails-datastore-simple"
-        exclude group:"org.grails",module: "grails-datastore-gorm"
-    }
-    provided "org.springframework:spring-expression:$springVersion"
-    provided "org.grails:grails-test:$grailsVersion", excludes
-    provided "org.grails:grails-plugin-testing:$grailsVersion", excludes
 
     def tomcatVersion = '7.0.50'
     testCompile "org.apache.tomcat:tomcat-jdbc:$tomcatVersion"

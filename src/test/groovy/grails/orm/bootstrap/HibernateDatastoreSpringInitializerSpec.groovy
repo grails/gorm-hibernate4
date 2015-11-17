@@ -99,7 +99,7 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
 
     }
 
-    @IgnoreRest
+//    @IgnoreRest
     void "Test configure multiple data sources"() {
         given:"An initializer instance"
 
