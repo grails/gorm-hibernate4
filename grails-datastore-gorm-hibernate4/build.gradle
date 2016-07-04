@@ -79,9 +79,14 @@ dependencies {
 
 
 test {
-    if (!isTravisBuild) {
-        forkEvery = 30
+    maxParallelForks = isTravisBuild ? 2 : 4
+    jvmArgs = ['-server', '-Xmx1024M', '-XX:MaxPermSize=128m']
+    forkEvery = isTravisBuild ? 20 : 100
+    afterSuite {
+        System.out.print('.')
+        System.out.flush()
     }
+
 }
 
 

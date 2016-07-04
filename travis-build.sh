@@ -3,6 +3,10 @@ EXIT_STATUS=0
 
 ./gradlew --stop
 
+./gradlew compileGroovy
+./gradlew --stop
+./gradlew compileTestGroovy
+./gradlew --stop
 
 ./gradlew test --refresh-dependencies -no-daemon -x gorm-hibernate4-spring-boot:test  || EXIT_STATUS=$?
 if [[ $EXIT_STATUS -eq 0 ]]; then
