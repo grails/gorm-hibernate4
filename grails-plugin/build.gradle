@@ -1,0 +1,20 @@
+dependencies {
+
+    compileOnly("org.grails:grails-core:$grailsVersion")
+    compileOnly("org.grails:grails-validation:$grailsVersion")
+    
+    compile "org.hibernate:hibernate-core:${hibernateVersion}.Final"
+    compile "org.grails:grails-datastore-web:$gormVersion"
+    compile "org.grails:grails-datastore-simple:$gormVersion"
+    compile "org.grails:grails-datastore-gorm-support:$gormVersion"
+    compile project(":grails-datastore-gorm-hibernate4"), {
+        exclude group:'org.springframework', module:'spring-context'
+        exclude group:'org.springframework', module:'spring-core'
+        exclude group:'org.springframework', module:'spring-beans'
+        exclude group:'org.springframework', module:'spring-tx'
+        exclude group:'org.grails', module:'grails-bootstrap'
+        exclude group:'org.codehaus.groovy', module:'groovy-all'
+        exclude group:'org.grails', module:'grails-core'
+        exclude group:'javax.transaction', module:'jta'
+    }
+}

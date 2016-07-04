@@ -1,5 +1,9 @@
 .gradle
 build/
+.idea
+target/
+*.zip
+grails2-plugin/plugins/
 
 # Ignore Gradle GUI config
 gradle-app.setting
