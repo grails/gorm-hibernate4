@@ -36,19 +36,19 @@ configurations.all { Configuration c ->
 
 def projectName = project.name.substring(project.name.indexOf('/') + 1)
 def component = new GrailsPluginComponent(
-    project.file("grails-${projectInfo.projectArtifactId}-${project.version}.zip"),
-    project.configurations.runtime.allDependencies,
-    project.tasks.findByName('grails-package-plugin')
+        project.file("grails-${projectInfo.projectArtifactId}-${project.version}.zip"),
+        project.configurations.runtime.allDependencies,
+        project.tasks.findByName('grails-package-plugin')
 )
 project.getComponents().add(component)
 
 dependencies {
+    compile "org.grails:grails-datastore-simple:$gormVersion"
+
     compile "org.grails:grails-datastore-core:$gormVersion"
     compile "org.grails:grails-datastore-gorm:$gormVersion"
-    compile "org.grails:grails-datastore-web:$gormVersion"
     compile "org.grails:grails-datastore-simple:$gormVersion"
     compile "org.grails:grails-datastore-gorm-grails2-support:$gormVersion"
-
     compile project(':grails-datastore-gorm-hibernate4'), {
         exclude group:'org.grails',module:'grails-datastore-gorm-support'
         exclude group:'org.grails',module:'grails-datastore-gorm-plugin-support'
@@ -64,9 +64,9 @@ dependencies {
     runtime "net.sf.ehcache:ehcache:2.9.0"
 
     runtime 'org.jboss.logging:jboss-logging:3.1.0.GA', {
-        exclude module:'jboss-logmanager'
-        exclude module:'log4j'
-        exclude module:'slf4j-api'
+        exclude group:'org.jboss.logmanager', module:'jboss-logmanager'
+        exclude group:'log4j', module:'log4j'
+        exclude group:'org.slf4j', module:'slf4j-api'
     }
     test "org.spockframework:spock-core:1.0-groovy-2.4"
     provided 'javax.servlet:javax.servlet-api:3.1.0'
@@ -79,6 +79,7 @@ project.tasks.withType(PublishToMavenRepository) { task ->
     task.dependsOn("assemble")
 }
 
+//test.jvmOptions.jvmArgs "-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005", "-Xdebug"
 
 class GrailsPluginComponent implements SoftwareComponentInternal {
 
@@ -93,14 +94,14 @@ class GrailsPluginComponent implements SoftwareComponentInternal {
     String getName() { "java" }
     Set<Usage> getUsages() {
         Collections.singleton new Usage() {
-            String getName() { "runtime" }            
+            String getName() { "runtime" }
             Set<PublishArtifact> getArtifacts() {
                 return Collections.singleton(GrailsPluginComponent.this.artifact);
             }
-            
+
             Set<ModuleDependency> getDependencies() {
                 return GrailsPluginComponent.this.runtimeDependencies.withType(ModuleDependency.class);
-            }        
+            }
 
         }
     }

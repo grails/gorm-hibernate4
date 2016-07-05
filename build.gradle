@@ -10,6 +10,7 @@ buildscript {
         classpath "io.github.groovylang.groovydoc:groovydoc-gradle-plugin:1.0.1"
         classpath "org.grails:grails-gradle-plugin:3.1.8"
         classpath "org.grails:grails-gradle-plugin:2.2.0.RC1"
+        classpath 'org.asciidoctor:asciidoctor-gradle-plugin:1.5.3'
     }
 }
 
@@ -38,7 +39,7 @@ ext {
 
 
 subprojects { project ->
-    boolean isPluginProject = project.name.endsWith("-plugin") && (project.name.startsWith("grails") || project.name.startsWith("rx-"))
+    boolean isPluginProject = project.name.endsWith("-plugin") && project.name.startsWith("grails")
     boolean isGrails3PluginProject = project.name.endsWith("-plugin") && !project.name.startsWith("grails2")
     boolean isGrails2PluginProject = project.name.endsWith("-plugin") && project.name.startsWith("grails2")
 
@@ -79,11 +80,11 @@ subprojects { project ->
                 }
             }
 
-        }         
+        }
     }
-       
 
-    if(isPluginProject) {        
+
+    if(isPluginProject) {
         group "org.grails.plugins"
     }
     else {
@@ -107,22 +108,26 @@ subprojects { project ->
                 cacheDynamicVersionsFor 0, 'hours'
                 cacheChangingModulesFor 0, 'hours'
             }
-        }        
+        }
     }
 
     if(isPluginProject) {
         group "org.grails.plugins"
     }
     else {
-        group "org.grails"        
+        group "org.grails"
+    }
+
+    if(project.name == 'docs') {
+        return
     }
 
     if(isGrails3PluginProject) {
-        apply plugin: "org.grails.grails-plugin"       
+        apply plugin: "org.grails.grails-plugin"
     }
     else if(!isGrails2PluginProject) {
         apply plugin:"groovy"
-        apply plugin: 'com.bmuschko.nexus'                
+        apply plugin: 'com.bmuschko.nexus'
     }
 
     apply plugin: 'maven-publish'
@@ -160,7 +165,7 @@ subprojects { project ->
                     }
                     else {
                         url  "https://repo.grails.org/grails/plugins-releases-local"
-                    }                    
+                    }
                 }
                 else if(isGrails3PluginProject) {
                     if(isBuildSnapshot) {
@@ -168,7 +173,7 @@ subprojects { project ->
                     }
                     else {
                         url  "https://repo.grails.org/grails/plugins3-releases-local"
-                    }                    
+                    }
                 }
                 else {
                     if(isBuildSnapshot) {
@@ -186,30 +191,26 @@ subprojects { project ->
         publications {
             maven(MavenPublication) {
                 artifactId projectInfo.projectArtifactId
-                
+                from components.java
 
-                if(!isGrails2PluginProject) {                    
-                    from components.java
+                if(!isGrails2PluginProject) {
                     artifact sourcesJar {
                         classifier "sources"
                     }
                     artifact javadocJar {
                         classifier "javadoc"
-                    }                    
-                }
-                else {
-                    artifact project.file("grails-hibernate4-${project.version}.zip")                    
+                    }
                 }
 
                 if(isGrails3PluginProject) {
                     artifact source:"${sourceSets.main.output.classesDir}/META-INF/grails-plugin.xml",
-                             classifier:"plugin",
-                             extension:'xml'
-                }   
+                            classifier:"plugin",
+                            extension:'xml'
+                }
                 else if(isGrails2PluginProject) {
                     artifact source:"plugin.xml",
-                             classifier:"plugin",
-                             extension:'xml'
+                            classifier:"plugin",
+                            extension:'xml'
 
                 }
 
@@ -232,19 +233,19 @@ subprojects { project ->
                                 }
                             }
                         }
-                        def grailsDep = xml.dependencies.dependency.find { dep -> 
-                            dep.artifactId.text() == 'grails-dependencies' 
+                        def grailsDep = xml.dependencies.dependency.find { dep ->
+                            dep.artifactId.text() == 'grails-dependencies'
                         }
                         if(grailsDep) {
                             grailsDep.replaceNode {}
-                        }                        
+                        }
                     }
                 }
 
             }
         }
-    }   
-    if(!isGrails2PluginProject) {        
+    }
+    if(!isGrails2PluginProject) {
         bintray {
 
             def u = System.getenv("BINTRAY_USER") ?: project.hasProperty("bintrayUser") ? project.bintrayUser : ''
@@ -286,7 +287,7 @@ subprojects { project ->
 
                 }
             }
-        }                 
+        }
     }
 
 }
