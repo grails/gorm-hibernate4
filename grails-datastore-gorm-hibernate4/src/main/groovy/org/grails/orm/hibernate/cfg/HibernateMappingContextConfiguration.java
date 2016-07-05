@@ -12,6 +12,7 @@ import org.hibernate.boot.registry.BootstrapServiceRegistry;
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.*;
+import org.hibernate.cfg.Settings;
 import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.internal.util.config.ConfigurationHelper;
@@ -206,15 +207,15 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
     }
 
     @Override
-    public Settings buildSettings(ServiceRegistry serviceRegistry) {
+    public org.hibernate.cfg.Settings buildSettings(ServiceRegistry serviceRegistry) {
         configureNamingStrategy();
-        Settings settings = super.buildSettings(serviceRegistry);
+        org.hibernate.cfg.Settings settings = super.buildSettings(serviceRegistry);
         settings.getEntityTuplizerFactory().registerDefaultTuplizerClass(EntityMode.POJO, GroovyAwarePojoEntityTuplizer.class);
         return settings;
     }
 
     @Override
-    public Settings buildSettings(Properties props, ServiceRegistry serviceRegistry) throws HibernateException {
+    public org.hibernate.cfg.Settings buildSettings(Properties props, ServiceRegistry serviceRegistry) throws HibernateException {
         configureNamingStrategy();
         Settings settings = super.buildSettings(props, serviceRegistry);
         settings.getEntityTuplizerFactory().registerDefaultTuplizerClass(EntityMode.POJO, GroovyAwarePojoEntityTuplizer.class);

@@ -351,15 +351,15 @@ public class GrailsAnnotationConfiguration extends Configuration implements Grai
     }
 
     @Override
-    public Settings buildSettings(ServiceRegistry serviceRegistry) {
-        Settings settings = super.buildSettings(serviceRegistry);
+    public org.hibernate.cfg.Settings buildSettings(ServiceRegistry serviceRegistry) {
+        org.hibernate.cfg.Settings settings = super.buildSettings(serviceRegistry);
         settings.getEntityTuplizerFactory().registerDefaultTuplizerClass(EntityMode.POJO, GroovyAwarePojoEntityTuplizer.class);
         return settings;
     }
 
     @Override
-    public Settings buildSettings(Properties props, ServiceRegistry serviceRegistry) throws HibernateException {
-        Settings settings = super.buildSettings(props, serviceRegistry);
+    public org.hibernate.cfg.Settings buildSettings(Properties props, ServiceRegistry serviceRegistry) throws HibernateException {
+        org.hibernate.cfg.Settings settings = super.buildSettings(props, serviceRegistry);
         settings.getEntityTuplizerFactory().registerDefaultTuplizerClass(EntityMode.POJO, GroovyAwarePojoEntityTuplizer.class);
         return settings;
     }
