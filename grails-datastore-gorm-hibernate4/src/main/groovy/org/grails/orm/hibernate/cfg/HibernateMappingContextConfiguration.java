@@ -2,10 +2,13 @@ package org.grails.orm.hibernate.cfg;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.orm.hibernate.EventListenerIntegrator;
 import org.grails.orm.hibernate.GrailsSessionContext;
 import org.grails.orm.hibernate.HibernateEventListeners;
+import org.grails.orm.hibernate.jdbc.connections.DataSourceConnectionSource;
+import org.grails.orm.hibernate.jdbc.connections.DataSourceSettings;
 import org.grails.orm.hibernate.proxy.GroovyAwarePojoEntityTuplizer;
 import org.hibernate.*;
 import org.hibernate.boot.registry.BootstrapServiceRegistry;
@@ -39,6 +42,7 @@ import org.springframework.util.ClassUtils;
 import javax.persistence.Embeddable;
 import javax.persistence.Entity;
 import javax.persistence.MappedSuperclass;
+import javax.sql.DataSource;
 import java.io.IOException;
 import java.util.*;
 
@@ -77,9 +81,26 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         resourcePatternResolver = ResourcePatternUtils.getResourcePatternResolver(applicationContext);
         String dsName = Mapping.DEFAULT_DATA_SOURCE.equals(dataSourceName) ? "dataSource" : "dataSource_" + dataSourceName;
-        getProperties().put(Environment.DATASOURCE, applicationContext.getBean(dsName));
+        Properties properties = getProperties();
+
+        if(applicationContext.containsBean(dsName)) {
+            properties.put(Environment.DATASOURCE, applicationContext.getBean(dsName));
+        }
+        properties.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, GrailsSessionContext.class.getName());
+        properties.put(AvailableSettings.CLASSLOADERS, applicationContext.getClassLoader());
+    }
+
+    /**
+     * Set the target SQL {@link DataSource}
+     *
+     * @param connectionSource The data source to use
+     */
+    public void setDataSourceConnectionSource(ConnectionSource<DataSource, DataSourceSettings> connectionSource) {
+        this.dataSourceName = connectionSource.getName();
+        DataSource source = connectionSource.getSource();
+        getProperties().put(Environment.DATASOURCE, source);
         getProperties().put(Environment.CURRENT_SESSION_CONTEXT_CLASS, GrailsSessionContext.class.getName());
-        getProperties().put(AvailableSettings.CLASSLOADERS, applicationContext.getClassLoader());
+        getProperties().put(AvailableSettings.CLASSLOADERS, connectionSource.getClass().getClassLoader());
     }
 
     /**
@@ -348,4 +369,6 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
             // ignore exception
         }
     }
+
+
 }

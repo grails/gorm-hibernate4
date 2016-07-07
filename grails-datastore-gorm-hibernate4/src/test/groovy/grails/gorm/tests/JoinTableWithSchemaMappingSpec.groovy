@@ -1,6 +1,11 @@
 package grails.gorm.tests
 
+import org.grails.orm.hibernate.cfg.HibernateMappingContext
+import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration
+import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
 import org.hibernate.cfg.Configuration
+import org.hibernate.mapping.PersistentClass
+import spock.lang.Ignore
 import spock.lang.Issue
 import grails.persistence.Entity
 import org.grails.datastore.gorm.Setup
@@ -11,6 +16,7 @@ import org.grails.orm.hibernate.cfg.GrailsAnnotationConfiguration
 class JoinTableWithSchemaMappingSpec extends GormDatastoreSpec{
 
     @Issue('GRAILS-8737')
+    @Ignore
     void "Test that a join table with schema and sequence generator works correctly"() {
         when:"A many-to-many with join table and schema definition is persisted"
             def author = new JoinTableSchemaAuthor(name: "Stephen King")
@@ -28,12 +34,12 @@ class JoinTableWithSchemaMappingSpec extends GormDatastoreSpec{
     @Issue('GRAILS-8737')
     void "Test that the schema created for a join table is correct"() {
         when:"The hibernate configuration is obtained"
-            Configuration config = Setup.hibernateConfig
-            final authorMapping = config.getClassMapping(JoinTableSchemaAuthor.name)
-
+            HibernateMappingContextConfiguration configuration = new HibernateMappingContextConfiguration()
+            configuration.setHibernateMappingContext(new HibernateMappingContext(new HibernateConnectionSourceSettings(), JoinTableSchemaAuthor, JoinTableSchemaBook))
+            configuration.buildMappings()
+            def authorMapping = configuration.getClassMapping(JoinTableSchemaAuthor.name)
 
         then:"The results are correct"
-            config != null
             authorMapping != null
             authorMapping.table.schema == 'www'
             authorMapping.getProperty("books").getValue().collectionTable.schema == 'www'

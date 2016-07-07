@@ -1,49 +1,39 @@
 package org.grails.datastore.gorm
 
 import grails.core.DefaultGrailsApplication
-import grails.validation.ConstraintsEvaluator
-import groovy.sql.Sql
 import grails.core.GrailsApplication
 import grails.core.GrailsDomainClass
+import grails.validation.ConstrainedProperty
+import grails.validation.ConstraintsEvaluator
+import groovy.sql.Sql
 import groovy.transform.CompileStatic
+import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.model.MappingContext
 import org.grails.orm.hibernate.GrailsHibernateTransactionManager
-import org.grails.orm.hibernate.GrailsSessionContext
 import org.grails.orm.hibernate.HibernateDatastore
-import org.grails.orm.hibernate.HibernateGormEnhancer
-import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration
-import org.grails.orm.hibernate.cfg.HibernateUtils
-import org.grails.orm.hibernate.events.PatchedDefaultFlushEventListener
+import org.grails.orm.hibernate.connections.HibernateConnectionSource
+import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory
+import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
-import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor
 import org.grails.orm.hibernate.validation.HibernateConstraintsEvaluator
 import org.grails.orm.hibernate.validation.HibernateDomainClassValidator
 import org.grails.orm.hibernate.validation.PersistentConstraintFactory
-
-import org.codehaus.groovy.grails.validation.ConstrainedProperty
-import org.grails.core.metaclass.MetaClassEnhancer
+import org.grails.orm.hibernate.validation.UniqueConstraint
 
 //import org.codehaus.groovy.grails.plugins.web.api.ControllersDomainBindingApi
-import org.grails.datastore.mapping.core.Session
-import org.grails.datastore.mapping.model.MappingContext
-import org.grails.orm.hibernate.validation.UniqueConstraint
 import org.h2.Driver
 import org.hibernate.SessionFactory
 import org.hibernate.cache.ehcache.EhCacheRegionFactory
 import org.hibernate.cfg.AvailableSettings
-import org.hibernate.dialect.H2Dialect
 import org.springframework.beans.BeanUtils
-import org.springframework.beans.BeanWrapper
-import org.springframework.beans.BeanWrapperImpl
 import org.springframework.beans.factory.DisposableBean
-import org.springframework.beans.factory.config.BeanDefinition
-import org.springframework.beans.factory.support.AbstractBeanDefinition
-import org.springframework.beans.factory.support.GenericBeanDefinition
 import org.springframework.context.ApplicationContext
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.orm.hibernate4.SessionFactoryUtils
 import org.springframework.orm.hibernate4.SessionHolder
-import org.springframework.orm.hibernate4.SpringSessionContext
 import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.DefaultTransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronizationManager
@@ -60,14 +50,22 @@ class Setup {
 
     @CompileStatic
     static destroy() {
+        Throwable exception
         if (transactionStatus != null) {
             def tx = transactionStatus
             transactionStatus = null
-            transactionManager.rollback(tx)
+            try {
+                transactionManager.rollback(tx)
+            } catch (Throwable e) {
+                exception = e
+            }
         }
         if (hibernateSession != null) {
             SessionFactoryUtils.closeSession( (org.hibernate.Session)hibernateSession )
         }
+
+        hibernateDatastore.destroy()
+        shutdownInMemDb(hibernateDatastore)
 
         if(hibernateConfig != null) {
             hibernateConfig = null
@@ -81,126 +79,88 @@ class Setup {
             applicationContext.destroy()
         }
         applicationContext = null
-        shutdownInMemDb()
+        if(exception != null) {
+            throw exception
+        }
+
     }
     
-    static shutdownInMemDb() {
+    static shutdownInMemDb(HibernateDatastore datastore) {
         Sql sql = null
         try {
-            sql = Sql.newInstance('jdbc:h2:mem:devDB', 'sa', '', Driver.name)
+            HibernateConnectionSource source = datastore.getConnectionSources().defaultConnectionSource
+
+            def url = source.settings.dataSource.url
+            sql = Sql.newInstance(url, 'sa', '', Driver.name)
             sql.executeUpdate('SHUTDOWN')
         } catch (e) {
             // already closed, ignore
+            println "error shutting down db:$e.message"
         } finally {
             try { sql?.close() } catch (ignored) {}
         }
     }
 
-    static Session setup(List<Class> classes, ConfigObject grailsConfig = null, boolean isTransactional = true) {
-        ExpandoMetaClass.enableGlobally()
-//        Log4jConfigurer.initLogging("classpath:log4j.properties")
+    static Session setup(List<Class> classes, ConfigObject grailsConfig = new ConfigObject(), boolean isTransactional = true) {
+        if(grailsConfig == null) grailsConfig = new ConfigObject()
+        grailsConfig.dataSource.dbCreate = "create-drop"
 
-        grailsApplication = new DefaultGrailsApplication(classes as Class[], new GroovyClassLoader(Setup.getClassLoader()))
+
+        Properties props = new Properties()
+        props.put AvailableSettings.USE_SECOND_LEVEL_CACHE, "true"
+        props.put AvailableSettings.USE_QUERY_CACHE, "true"
+        props.put AvailableSettings.CACHE_REGION_FACTORY, EhCacheRegionFactory.name
+        grailsConfig.merge( new ConfigSlurper().parse(props) )
+
+
+        def classesArray = classes as Class[]
+        grailsApplication = new DefaultGrailsApplication(classesArray, new GroovyClassLoader(Setup.getClassLoader()))
         if(grailsConfig) {
             grailsApplication.config.putAll(grailsConfig)
         }
 
-        applicationContext = new GenericApplicationContext()
-        def ctx = applicationContext
 
+        def ctx = new GenericApplicationContext()
+        ctx.refresh()
+        applicationContext = ctx
         grailsApplication.applicationContext = ctx
         grailsApplication.mainContext = ctx
         grailsApplication.initialise()
-        ctx.beanFactory.registerSingleton 'grailsApplication', grailsApplication
 
-        for (GrailsDomainClass dc in grailsApplication.domainClasses) {
-            if (!dc.abstract) {
-                ctx.registerBeanDefinition dc.clazz.name, new GenericBeanDefinition(
-                        autowireMode: AbstractBeanDefinition.AUTOWIRE_BY_NAME,
-                        beanClass: dc.clazz,
-                        scope: BeanDefinition.SCOPE_PROTOTYPE)
-            }
-        }
-        ctx.refresh()
+        HibernateConnectionSourceFactory factory = new HibernateConnectionSourceFactory(classesArray)
+        factory.setApplicationContext(applicationContext)
+        hibernateDatastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(grailsConfig), factory)
 
-        def config = new Properties()
-        config.setProperty AvailableSettings.DIALECT, H2Dialect.name
-        config.setProperty AvailableSettings.DRIVER, Driver.name
-        config.setProperty AvailableSettings.URL, "jdbc:h2:mem:devDB;MVCC=true;INIT=CREATE SCHEMA IF NOT EXISTS WWW;"
-        config.setProperty AvailableSettings.USER, "sa"
-        config.setProperty AvailableSettings.PASS, ""
-        config.setProperty AvailableSettings.HBM2DDL_AUTO, "create-drop"
-        config.setProperty AvailableSettings.SHOW_SQL, "true"
-        config.setProperty AvailableSettings.FORMAT_SQL, "true"
-        config.setProperty AvailableSettings.CURRENT_SESSION_CONTEXT_CLASS, SpringSessionContext.name
-        config.setProperty AvailableSettings.USE_SECOND_LEVEL_CACHE, "true"
-        config.setProperty AvailableSettings.USE_QUERY_CACHE, "true"
-        config.setProperty AvailableSettings.CACHE_REGION_FACTORY, EhCacheRegionFactory.name
-        config.setProperty AvailableSettings.CURRENT_SESSION_CONTEXT_CLASS, GrailsSessionContext.name
-
-        Closure defaultMapping = grailsConfig?.grails?.gorm?.default?.mapping instanceof Closure ? grailsConfig.grails.gorm.default.mapping : null
-        def context = new HibernateMappingContext((Closure)defaultMapping, ctx)
-        context.addPersistentEntities(*grailsApplication.domainClasses*.clazz)
-        context.setProxyFactory(new HibernateProxyHandler())
-        ctx.beanFactory.registerSingleton 'grailsDomainClassMappingContext', context
-
-        hibernateConfig = new HibernateMappingContextConfiguration()
-        hibernateConfig.setHibernateMappingContext(context)
-        hibernateConfig.setProperties config
-
-
-        def eventTriggeringInterceptor = new ClosureEventTriggeringInterceptor(applicationContext: ctx)
-        hibernateConfig.setEventListeners(
-            ['pre-load': eventTriggeringInterceptor,
-            'flush': new PatchedDefaultFlushEventListener(),
-             'save': eventTriggeringInterceptor,
-             'post-load': eventTriggeringInterceptor,
-             'save-update': eventTriggeringInterceptor,
-             'pre-insert': eventTriggeringInterceptor,
-             'post-insert': eventTriggeringInterceptor,
-             'pre-update': eventTriggeringInterceptor,
-             'pre-delete': eventTriggeringInterceptor,
-             'post-update': eventTriggeringInterceptor,
-             'post-delete': eventTriggeringInterceptor ] )
-
-
-        sessionFactory = hibernateConfig.buildSessionFactory()
-        ctx.beanFactory.registerSingleton 'sessionFactory', sessionFactory
-
-        transactionManager = new GrailsHibernateTransactionManager(sessionFactory: sessionFactory)
-        ctx.beanFactory.registerSingleton 'transactionManager', transactionManager
-
-        hibernateDatastore = new HibernateDatastore(context, sessionFactory, grailsApplication.config, ctx)
-        ctx.beanFactory.registerSingleton 'hibernateDatastore', hibernateDatastore
-
-        eventTriggeringInterceptor.setDatastores([hibernateDatastore] as HibernateDatastore[])
-        ctx.beanFactory.registerSingleton 'eventTriggeringInterceptor', eventTriggeringInterceptor
-
-        def metaClassEnhancer = new MetaClassEnhancer()
-//        metaClassEnhancer.addApi new ControllersDomainBindingApi()
 
         HibernateConstraintsEvaluator evaluator = new HibernateConstraintsEvaluator()
         evaluator.setMappingContext(hibernateDatastore.mappingContext)
         ctx.beanFactory.registerSingleton(ConstraintsEvaluator.BEAN_NAME, evaluator)
+        def mappingContext = hibernateDatastore.mappingContext
+        ConstrainedProperty.registerNewConstraint(UniqueConstraint.UNIQUE_CONSTRAINT,
+                new PersistentConstraintFactory(ctx, UniqueConstraint))
+
+        ctx.beanFactory.registerSingleton("sessionFactory", hibernateDatastore.getSessionFactory())
+        ctx.beanFactory.registerSingleton("mappingContext", hibernateDatastore.getMappingContext())
+        ctx.beanFactory.registerSingleton("grailsApplication", grailsApplication)
+
         grailsApplication.domainClasses.each { GrailsDomainClass dc ->
             if (dc.abstract) {
                 return
             }
 
-            metaClassEnhancer.enhance dc.metaClass
-
-
             def validator = new HibernateDomainClassValidator()
 
-            validator.mappingContext = context
+
+
+            validator.mappingContext = mappingContext
             validator.grailsApplication = grailsApplication
             validator.domainClass = dc
             validator.messageSource = ctx
             validator.proxyHandler = new HibernateProxyHandler()
             dc.validator = validator
-            def entity = context.getPersistentEntity(dc.fullName)
+            def entity = mappingContext.getPersistentEntity(dc.fullName)
             if(entity != null) {
-                context.addEntityValidator(entity, validator)
+                mappingContext.addEntityValidator(entity, validator)
             }
 
             dc.metaClass.constructor = { ->
@@ -215,21 +175,15 @@ class Setup {
             }
         }
 
-        def enhancer = new HibernateGormEnhancer(hibernateDatastore, transactionManager)
-        enhancer.enhance()
-
-        hibernateDatastore.mappingContext.addMappingContextListener({ e ->
-            enhancer.enhance e
-        } as MappingContext.Listener)
-
-        transactionManager = new GrailsHibernateTransactionManager(sessionFactory: sessionFactory)
+        ctx.defaultListableBeanFactory.registerSingleton('hibernateDatastore', hibernateDatastore)
+        transactionManager = hibernateDatastore.getTransactionManager()
+        sessionFactory = hibernateDatastore.sessionFactory
         if (transactionStatus == null && isTransactional) {
             transactionStatus = transactionManager.getTransaction(new DefaultTransactionDefinition())
         }
         else if(isTransactional){
             throw new RuntimeException("new transaction started during active transaction")
         }
-
         if(!isTransactional) {
             hibernateSession = sessionFactory.openSession()
             TransactionSynchronizationManager.bindResource(sessionFactory, new SessionHolder(hibernateSession))
@@ -237,19 +191,6 @@ class Setup {
         else {
             hibernateSession = sessionFactory.currentSession
         }
-
-        ApplicationContext.metaClass.getProperty = { String name ->
-            if (delegate.containsBean(name)) {
-                return delegate.getBean(name)
-            }
-            BeanWrapper bw = new BeanWrapperImpl(delegate)
-            if (bw.isReadableProperty(name)) {
-                return bw.getPropertyValue(name)
-            }
-        }
-
-        ConstrainedProperty.registerNewConstraint(UniqueConstraint.UNIQUE_CONSTRAINT,
-                new PersistentConstraintFactory(ctx, UniqueConstraint))
 
         return hibernateDatastore.connect()
     }

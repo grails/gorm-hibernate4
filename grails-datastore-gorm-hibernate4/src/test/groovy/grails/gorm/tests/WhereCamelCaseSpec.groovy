@@ -40,8 +40,8 @@ class WhereCamelCaseSpec extends GormDatastoreSpec{
     }
 
     def "camelCase prop with alias on left side"() {
-        new CamelCaseFoo(fooName: "foo").save()
-        new CamelCaseBar(barName: "bar").save()
+        new CamelCaseFoo(name:"one",fooName: "foo").save()
+        new CamelCaseBar(name:"two",barName: "bar").save()
 
         when:
         CamelCaseFoo.where {

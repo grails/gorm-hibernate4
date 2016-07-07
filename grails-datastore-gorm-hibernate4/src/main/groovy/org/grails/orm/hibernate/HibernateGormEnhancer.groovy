@@ -43,43 +43,21 @@ class HibernateGormEnhancer extends GormEnhancer {
     }
 
     @Override
-    protected boolean appliesToDatastore(Datastore datastore, PersistentEntity entity) {
-        if(MultipleDataSourceSupport.usesDatasource(entity, ((AbstractHibernateDatastore)datastore).getDataSourceName())) {
-            return super.appliesToDatastore(datastore, entity)
-        }
-        return false;
+    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, String qualifier) {
+        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
+        new HibernateGormStaticApi<D>(cls, hibernateDatastore.getDatastoreForConnection(qualifier), getFinders(), Thread.currentThread().contextClassLoader, transactionManager)
     }
 
     @Override
-    Set<String> allQualifiers(Datastore datastore, PersistentEntity entity) {
-        def dataSourceName = MultipleDataSourceSupport.getDefaultDataSource(entity)
-        def datastoreStoreDataSourceName = ((HibernateDatastore) datastore).dataSourceName
-        Set<String> qualifiers = []
-
-        def allMappedDataSources = MultipleDataSourceSupport.getDatasourceNames(entity)
-        if(datastoreStoreDataSourceName.equals(dataSourceName) ) {
-            qualifiers.add(Entity.DEFAULT_DATA_SOURCE)
-        }
-        if(allMappedDataSources.contains(datastoreStoreDataSourceName) || allMappedDataSources.contains(ConnectionSource.ALL)) {
-            qualifiers.add(datastoreStoreDataSourceName)
-        }
-        return qualifiers
-
-    }
-
-
-    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier = ConnectionSource.DEFAULT) {
-        new HibernateGormValidationApi<D>(cls, (HibernateDatastore)datastore, Thread.currentThread().contextClassLoader)
+    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier) {
+        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
+        new HibernateGormInstanceApi<D>(cls, hibernateDatastore.getDatastoreForConnection(qualifier), Thread.currentThread().contextClassLoader)
     }
 
     @Override
-    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, String qualifier = ConnectionSource.DEFAULT) {
-        new HibernateGormStaticApi<D>(cls, (HibernateDatastore)datastore, getFinders(), Thread.currentThread().contextClassLoader, transactionManager)
-    }
-
-    @Override
-    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier = ConnectionSource.DEFAULT) {
-        new HibernateGormInstanceApi<D>(cls, (HibernateDatastore)datastore, Thread.currentThread().contextClassLoader)
+    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier) {
+        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
+        new HibernateGormValidationApi<D>(cls, hibernateDatastore.getDatastoreForConnection(qualifier), Thread.currentThread().contextClassLoader)
     }
 
     @Override

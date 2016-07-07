@@ -12,7 +12,13 @@ dependencies {
 
     // Web dependencies compileOnly
     compileOnly "javax.servlet:javax.servlet-api:$servletApiVersion"
-    compileOnly "org.grails:grails-web-url-mappings:$grailsVersion"
+
+    compileOnly "org.grails:grails-web-url-mappings:$grailsVersion", {
+        transitive = false
+    }
+    compileOnly "org.grails:grails-validation:$grailsVersion", {
+        transitive = false
+    }
     compileOnly("org.grails:grails-datastore-web:$gormVersion")
 
     String hibVersion = "${hibernateVersion}.Final"
@@ -75,7 +81,6 @@ dependencies {
     testRuntime "org.apache.tomcat.embed:tomcat-embed-logging-log4j:$tomcatVersion"
 
 }
-
 
 
 test {

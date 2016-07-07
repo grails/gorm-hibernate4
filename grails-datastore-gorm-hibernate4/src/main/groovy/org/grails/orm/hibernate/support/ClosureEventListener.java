@@ -23,8 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.grails.datastore.gorm.GormValidateable;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.reflect.ClassUtils;
@@ -45,6 +43,8 @@ import org.hibernate.engine.spi.ActionQueue;
 import org.hibernate.engine.spi.ExecutableList;
 import org.hibernate.event.spi.*;
 import org.hibernate.persister.entity.EntityPersister;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.validation.Errors;
 
@@ -67,7 +67,7 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
                                              PreUpdateEventListener {
 
     private static final long serialVersionUID = 1;
-    protected static final Log LOG = LogFactory.getLog(ClosureEventListener.class);
+    protected static final Logger LOG = LoggerFactory.getLogger(ClosureEventListener.class);
 
     final EventTriggerCaller saveOrUpdateCaller;
     final EventTriggerCaller beforeInsertCaller;
@@ -111,7 +111,7 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
         postDeleteEventListener = buildCaller(ClosureEventTriggeringInterceptor.AFTER_DELETE_EVENT, domainClazz);
         preDeleteEventListener = buildCaller(ClosureEventTriggeringInterceptor.BEFORE_DELETE_EVENT, domainClazz);
         preUpdateEventListener = buildCaller(ClosureEventTriggeringInterceptor.BEFORE_UPDATE_EVENT, domainClazz);
-        
+
         beforeValidateEventListener = new BeforeValidateEventTriggerCaller(domainClazz, domainMetaClass);
 
         if (failOnErrorPackages.size() > 0) {
@@ -149,7 +149,7 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
             shouldTimestamp = false;
         }
     }
-    
+
     private boolean verifyTimestampFieldTypeSupport(Class<?> domainClazz, TimestampProvider timestampProvider, MetaProperty timestampField) {
         if(timestampProvider.supportsCreating(timestampField.getType())) {
             return true;
@@ -158,7 +158,7 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
             return false;
         }
     }
-    
+
     private EventTriggerCaller buildCaller(String eventName, Class<?> domainClazz) {
         return EventTriggerCaller.buildCaller(eventName, domainClazz, domainMetaClass, null);
     }
@@ -169,11 +169,11 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
 
     private Field actionQueueUpdatesField;
     private Field entityUpdateActionStateField;
-    
+
     private void synchronizePersisterState(AbstractPreDatabaseOperationEvent event, Object[] state) {
         Object entity = event.getEntity();
         EntityPersister persister = event.getPersister();
-        
+
         String[] propertyNames = persister.getPropertyNames();
         HashMap<Integer, Object> changedState=new HashMap<Integer, Object>();
         for (int i = 0; i < propertyNames.length; i++) {
@@ -189,7 +189,7 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
             state[i] = value;
             persister.setPropertyValue(entity, i, value);
         }
-        
+
         synchronizeEntityUpdateActionState(event, entity, changedState);
     }
 

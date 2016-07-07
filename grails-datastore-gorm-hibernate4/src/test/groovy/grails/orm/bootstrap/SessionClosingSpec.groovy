@@ -35,7 +35,7 @@ class SessionClosingSpec extends Specification {
 
     void "Test that connections do not leak when no session is prebound"() {
         given: "An initializer instance"
-            def datastoreInitializer = new HibernateDatastoreSpringInitializer(Person)
+            def datastoreInitializer = new HibernateDatastoreSpringInitializer(['dataSource.dbCreate':'create-drop'],Person)
             def applicationContext = new GenericApplicationContext()
             def pool = new PoolProperties()
             pool.driverClassName = org.h2.Driver.name
