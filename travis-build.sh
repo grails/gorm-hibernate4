@@ -8,7 +8,7 @@ EXIT_STATUS=0
 ./gradlew compileTestGroovy
 ./gradlew --stop
 
-./gradlew test --refresh-dependencies -no-daemon -x gorm-hibernate4-spring-boot:test  || EXIT_STATUS=$?
+./gradlew test --refresh-dependencies -no-daemon -x grails2-plugin:test -x gorm-hibernate4-spring-boot:test  || EXIT_STATUS=$?
 #if [[ $EXIT_STATUS -eq 0 ]]; then
 #    ./gradlew grails2-plugin:test -no-daemon || EXIT_STATUS=$?
 #fi
