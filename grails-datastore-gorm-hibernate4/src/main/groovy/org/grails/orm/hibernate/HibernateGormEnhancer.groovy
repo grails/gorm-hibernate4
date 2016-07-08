@@ -39,6 +39,7 @@ import org.springframework.transaction.PlatformTransactionManager
 @CompileStatic
 class HibernateGormEnhancer extends GormEnhancer {
 
+    @Deprecated
     HibernateGormEnhancer(HibernateDatastore datastore, PlatformTransactionManager transactionManager) {
         super(datastore, transactionManager)
     }

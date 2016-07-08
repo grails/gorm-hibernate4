@@ -3,6 +3,7 @@ package org.grails.orm.hibernate.cfg;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.orm.hibernate.EventListenerIntegrator;
 import org.grails.orm.hibernate.GrailsSessionContext;
@@ -292,7 +293,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
                 if (loader.getResource(hibernateConfig) != null) continue;
 
                 final Mappings mappings = super.createMappings();
-                if (!GrailsHibernateUtil.usesDatasource(domainClass, dataSourceName)) {
+                if (!ConnectionSourcesSupport.usesConnectionSource(domainClass, dataSourceName)) {
                     continue;
                 }
 
