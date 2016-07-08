@@ -151,15 +151,11 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             hibernateProxyHandler(HibernateProxyHandler)
             proxyHandler(ProxyHandlerAdapter, ref('hibernateProxyHandler'))
 
-            // Useful interceptor for wrapping Hibernate behavior
-            persistenceInterceptor(AggregatePersistenceContextInterceptor) {
-                delegate.dataSourceNames  = dataSources
-            }
-
             def config = this.configuration
             final boolean isGrailsPresent = isGrailsPresent()
             hibernateConnectionSourceFactory(HibernateConnectionSourceFactory, persistentClasses as Class[])
             hibernateDatastore(HibernateDatastore, config, hibernateConnectionSourceFactory)
+            persistenceInterceptor(AggregatePersistenceContextInterceptor, ref("hibernateDatastore"))
             sessionFactory(hibernateDatastore:'getSessionFactory')
             transactionManager(hibernateDatastore:"getTransactionManager")
 
