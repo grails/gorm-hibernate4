@@ -28,7 +28,7 @@ class TestEntity {
             cls.load(1)
         then:
             def e = thrown(IllegalStateException)
-        e.message.contains '''Either class [TestEntity] is not a domain class or GORM has not been initialized correctly or has already been shutdown. If you are unit testing your entities using the mocking APIs'''
+        e.message.contains '''Either class [TestEntity] is not a domain class or GORM has not been initialized correctly or has already been shutdown. Ensure GORM is loaded and configured correctly before calling any methods on a GORM entity.'''
     }
 
     void 'Test that the compiler will not allow an entity to be marked with @Canonical'() {

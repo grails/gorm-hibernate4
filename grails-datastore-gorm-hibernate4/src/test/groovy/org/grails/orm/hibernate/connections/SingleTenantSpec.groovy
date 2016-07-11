@@ -82,7 +82,9 @@ class SingleTenantSpec extends Specification {
             assert s.connection().metaData.getURL() == "jdbc:h2:mem:books"
             MultiTenantAuthor.count() == 0
         }
-        MultiTenantAuthor.withTenant("moreBooks") { Session s ->
+        MultiTenantAuthor.withTenant("moreBooks") { Serializable tenantId, Session s ->
+            assert tenantId != null
+            assert s != null
             MultiTenantAuthor.count() == 2
         }
 
