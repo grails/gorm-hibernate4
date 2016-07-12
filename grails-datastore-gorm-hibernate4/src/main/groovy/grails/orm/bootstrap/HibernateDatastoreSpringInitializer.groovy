@@ -182,7 +182,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
 
             for(dataSourceName in dataSources) {
 
-                boolean isDefault = dataSourceName == Settings.SETTING_DATASOURCE
+                boolean isDefault = dataSourceName == Settings.SETTING_DATASOURCE || dataSourceName == ConnectionSource.DEFAULT
                 if(isDefault) continue
 
                 String suffix = '_' + dataSourceName
