@@ -3,5 +3,10 @@ include "grails-datastore-gorm-hibernate4",
         'grails-plugin',
         'grails2-plugin'
 
+
+// Examples
+include "examples/grails31-hibernate4"
+include "examples/grails31-multiple-datasources"
+
 findProject(':boot-plugin').name = 'gorm-hibernate4-spring-boot'
 

@@ -20,17 +20,18 @@ import org.grails.datastore.gorm.bootstrap.AbstractDatastoreInitializer
 import org.grails.datastore.gorm.proxy.ProxyHandlerAdapter
 import org.grails.datastore.gorm.support.AbstractDatastorePersistenceContextInterceptor
 import org.grails.datastore.gorm.support.DatastorePersistenceContextInterceptor
-import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSources
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.validation.BeanFactoryValidatorRegistry
+import org.grails.orm.hibernate.GrailsHibernateTransactionManager
 import org.grails.orm.hibernate.HibernateDatastore
-import org.grails.orm.hibernate.cfg.Mapping
+import org.grails.orm.hibernate.cfg.Settings
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 import org.grails.orm.hibernate.support.FlushOnRedirectEventListener
 import org.grails.orm.hibernate.validation.HibernateDomainClassValidator
-import org.grails.orm.hibernate4.support.AggregatePersistenceContextInterceptor
 import org.grails.orm.hibernate4.support.GrailsOpenSessionInViewInterceptor
+import org.grails.orm.hibernate5.support.AggregatePersistenceContextInterceptor
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.config.MethodInvokingFactoryBean
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
@@ -38,6 +39,7 @@ import org.springframework.context.ApplicationContext
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.PropertyResolver
+import org.springframework.transaction.PlatformTransactionManager
 
 import javax.sql.DataSource
 /**
@@ -53,7 +55,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
     public static final String DATA_SOURCES = "dataSources";
     public static final String TEST_DB_URL = "jdbc:h2:mem:grailsDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1"
 
-    String defaultDataSourceBeanName = Mapping.DEFAULT_DATA_SOURCE
+    String defaultDataSourceBeanName = ConnectionSource.DEFAULT
     String defaultSessionFactoryBeanName = SESSION_FACTORY_BEAN_NAME
     String ddlAuto = "update"
     Set<String> dataSources = [defaultDataSourceBeanName]
@@ -84,10 +86,6 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
         configureDataSources(this.configuration)
     }
 
-    HibernateDatastoreSpringInitializer(Class... persistentClasses) {
-        super(DatastoreUtils.createPropertyResolver(null), persistentClasses)
-        configureDataSources(null)
-    }
 
     @CompileStatic
     void configureDataSources(PropertyResolver config) {
@@ -105,7 +103,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             } else {
                 Map dataSource = (Map)config.getProperty(DEFAULT_DATA_SOURCE_NAME, Map.class, Collections.emptyMap())
                 if (dataSource != null && !dataSource.isEmpty()) {
-                    dataSourceNames.add( Mapping.DEFAULT_DATA_SOURCE)
+                    dataSourceNames.add( ConnectionSource.DEFAULT )
                 }
             }
         }
@@ -151,13 +149,17 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             hibernateProxyHandler(HibernateProxyHandler)
             proxyHandler(ProxyHandlerAdapter, ref('hibernateProxyHandler'))
 
+            // Useful interceptor for wrapping Hibernate behavior
+
+
             def config = this.configuration
             final boolean isGrailsPresent = isGrailsPresent()
             hibernateConnectionSourceFactory(HibernateConnectionSourceFactory, persistentClasses as Class[])
             hibernateDatastore(HibernateDatastore, config, hibernateConnectionSourceFactory)
-            persistenceInterceptor(AggregatePersistenceContextInterceptor, ref("hibernateDatastore"))
             sessionFactory(hibernateDatastore:'getSessionFactory')
             transactionManager(hibernateDatastore:"getTransactionManager")
+            getBeanDefinition("transactionManager").beanClass = PlatformTransactionManager
+            persistenceInterceptor(AggregatePersistenceContextInterceptor, ref("hibernateDatastore"))
 
             // domain model mapping context, used for configuration
             grailsDomainClassMappingContext(hibernateDatastore:"getMappingContext") {
@@ -180,7 +182,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
 
             for(dataSourceName in dataSources) {
 
-                boolean isDefault = dataSourceName == defaultDataSourceBeanName
+                boolean isDefault = dataSourceName == Settings.SETTING_DATASOURCE
                 if(isDefault) continue
 
                 String suffix = '_' + dataSourceName
@@ -197,15 +199,18 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
                 }
 
                 String transactionManagerBeanName = "transactionManager$suffix"
-                if (!beanDefinitionRegistry.containsBeanDefinition(transactionManagerBeanName)) {
-                    "$transactionManagerBeanName"((datastoreBeanName):"getTransactionManager")
+
+                "$transactionManagerBeanName"(GrailsHibernateTransactionManager) {
+                    dataSource = ref("dataSource$suffix")
+                    sessionFactory = ref(sessionFactoryName)
                 }
+
                 boolean osivEnabled = config.getProperty("hibernate${suffix}.osiv.enabled", Boolean, true)
                 boolean isWebApplication = beanDefinitionRegistry?.containsBeanDefinition("dispatcherServlet") ||
                         beanDefinitionRegistry?.containsBeanDefinition("grailsControllerHelper")
 
                 if (isWebApplication && osivEnabled) {
-                    "flushingRedirectEventListener$suffix"(FlushOnRedirectEventListener, datastoreBeanName)
+                    "flushingRedirectEventListener$suffix"(FlushOnRedirectEventListener, ref(datastoreBeanName))
                     "openSessionInViewInterceptor$suffix"(GrailsOpenSessionInViewInterceptor) {
                         hibernateDatastore = ref(datastoreBeanName)
                     }
