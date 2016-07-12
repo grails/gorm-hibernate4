@@ -74,6 +74,7 @@ class HibernateGrailsPlugin extends Plugin {
                                                 .collect() { GrailsClass cls -> cls.clazz }
 
         def springInitializer = new HibernateDatastoreSpringInitializer((PropertyResolver)config, domainClasses)
+        springInitializer.grailsPlugin = true
         dataSourceNames = springInitializer.dataSources
         if(!Environment.isDevelopmentMode()) {
             // set no-op for default DDL auto setting if not in development mode

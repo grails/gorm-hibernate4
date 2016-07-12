@@ -59,6 +59,7 @@ class Hibernate4GrailsPlugin {
                             .collect() { GrailsClass cls -> cls.clazz }
         def initializer = new HibernateDatastoreSpringInitializer(application.config, domainClasses)
         initializer.registerApplicationIfNotPresent = false
+        initializer.grailsPlugin = true
         initializer.enableReload = grails.util.Environment.isDevelopmentMode()
         dataSourceNames.addAll( initializer.dataSources )
         def definitions = initializer.getBeanDefinitions((BeanDefinitionRegistry) springConfig.getUnrefreshedApplicationContext())
