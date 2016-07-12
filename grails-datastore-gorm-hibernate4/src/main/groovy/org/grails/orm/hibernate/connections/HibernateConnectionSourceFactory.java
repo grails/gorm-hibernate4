@@ -33,6 +33,10 @@ import java.io.IOException;
  * @since 6.0
  */
 public class HibernateConnectionSourceFactory extends AbstractHibernateConnectionSourceFactory implements ApplicationContextAware {
+    static {
+        // use Slf4j logging by default
+        System.setProperty("org.jboss.logging.provider", "slf4j");
+    }
 
     protected HibernateMappingContext mappingContext;
     protected Class[] persistentClasses = new Class[0];

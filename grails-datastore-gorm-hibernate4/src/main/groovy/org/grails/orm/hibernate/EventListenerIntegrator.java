@@ -15,13 +15,8 @@
  */
 package org.grails.orm.hibernate;
 
-import grails.util.CollectionUtils;
-
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
 import org.hibernate.cfg.Configuration;
@@ -44,7 +39,7 @@ public class EventListenerIntegrator implements Integrator {
     }
 
     @SuppressWarnings("unchecked")
-    protected static final List<EventType<? extends Serializable>> TYPES = CollectionUtils.newList(
+    protected static final List<EventType<? extends Serializable>> TYPES = Arrays.asList(
             EventType.AUTO_FLUSH,
             EventType.MERGE,
             EventType.PERSIST,
@@ -110,7 +105,7 @@ public class EventListenerIntegrator implements Integrator {
     }
 
     protected <T> void appendListeners(EventListenerRegistry listenerRegistry,
-            EventType<T> eventType, Collection<T> listeners) {
+                                       EventType<T> eventType, Collection<T> listeners) {
 
         EventListenerGroup<T> group = listenerRegistry.getEventListenerGroup(eventType);
         for (T listener : listeners) {
@@ -135,7 +130,7 @@ public class EventListenerIntegrator implements Integrator {
 
     @SuppressWarnings("unchecked")
     protected <T> void appendListeners(final EventListenerRegistry listenerRegistry,
-            final EventType<T> eventType, final Map<String, Object> listeners) {
+                                       final EventType<T> eventType, final Map<String, Object> listeners) {
 
         Object listener = listeners.get(eventType.eventName());
         if (listener != null) {

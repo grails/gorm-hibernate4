@@ -19,6 +19,7 @@ import org.grails.datastore.gorm.validation.constraints.MappingContextAwareConst
 import org.grails.datastore.gorm.validation.constraints.builtin.UniqueConstraint;
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry;
 import org.grails.datastore.mapping.core.ConnectionNotFoundException;
+import org.grails.datastore.mapping.core.DatastoreUtils;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
@@ -28,10 +29,14 @@ import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.engine.event.DatastoreInitializedEvent;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
+import org.grails.orm.hibernate.cfg.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
+import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.orm.hibernate.connections.HibernateConnectionSource;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
+import org.grails.orm.hibernate.multitenancy.MultiTenantEventListener;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
 import org.hibernate.SessionFactory;
 import org.springframework.beans.BeansException;
@@ -40,6 +45,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.PropertyResolver;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -125,6 +131,10 @@ public class HibernateDatastore extends AbstractHibernateDatastore  {
         this(configuration, new HibernateConnectionSourceFactory(classes));
     }
 
+    public HibernateDatastore(Class...classes) {
+        this(DatastoreUtils.createPropertyResolver(Collections.singletonMap(Settings.SETTING_DB_CREATE, (Object) "create-drop")), new HibernateConnectionSourceFactory(classes));
+    }
+
     @Override
     public ApplicationEventPublisher getApplicationEventPublisher() {
         return this.eventPublisher;
@@ -155,6 +165,9 @@ public class HibernateDatastore extends AbstractHibernateDatastore  {
 
     protected void registerEventListeners(ConfigurableApplicationEventPublisher eventPublisher) {
         eventPublisher.addApplicationListener(new AutoTimestampEventListener(this));
+        if(multiTenantMode == MultiTenancySettings.MultiTenancyMode.MULTI) {
+            eventPublisher.addApplicationListener(new MultiTenantEventListener());
+        }
         eventPublisher.addApplicationListener(eventTriggeringInterceptor);
     }
 
@@ -238,12 +251,9 @@ public class HibernateDatastore extends AbstractHibernateDatastore  {
     @Override
     public void destroy() throws Exception {
         try {
-            try {
-                super.destroy();
-            } finally {
-                this.getConnectionSources().close();
-            }
+            super.destroy();
         } finally {
+            GrailsDomainBinder.clearMappingCache();
             this.gormEnhancer.close();
         }
     }

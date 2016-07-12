@@ -19,18 +19,17 @@ import grails.orm.HibernateCriteriaBuilder
 import grails.orm.PagedResultList
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode
 import org.grails.datastore.gorm.GormEnhancer
-import org.grails.orm.hibernate.query.GrailsHibernateQueryUtils
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
-import org.hibernate.Criteria
-import org.hibernate.LockMode
-import org.hibernate.Session
-import org.hibernate.SessionFactory
+import org.grails.datastore.mapping.query.event.PostQueryEvent
+import org.grails.datastore.mapping.query.event.PreQueryEvent
+import org.grails.orm.hibernate.query.GrailsHibernateQueryUtils
+import org.grails.orm.hibernate.query.HibernateHqlQuery
+import org.grails.orm.hibernate.query.HibernateQuery
+import org.hibernate.*
 import org.springframework.core.convert.ConversionService
-import org.springframework.orm.hibernate4.SessionFactoryUtils
 import org.springframework.orm.hibernate4.SessionHolder
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionSynchronizationManager
@@ -52,7 +51,7 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
     private int defaultFlushMode
 
     HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders,
-                ClassLoader classLoader, PlatformTransactionManager transactionManager) {
+                           ClassLoader classLoader, PlatformTransactionManager transactionManager) {
         super(persistentClass, datastore, finders, transactionManager, null)
         this.classLoader = classLoader
         sessionFactory = datastore.getSessionFactory()
@@ -62,8 +61,30 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
         hibernateTemplate = new GrailsHibernateTemplate(sessionFactory, datastore)
         this.defaultFlushMode = datastore.getDefaultFlushMode()
         super.hibernateTemplate = hibernateTemplate
-        
+
         instanceApi = new HibernateGormInstanceApi<>(persistentClass, datastore, classLoader)
+    }
+
+    @Override
+    List<D> list(Map params = Collections.emptyMap()) {
+        hibernateTemplate.execute { Session session ->
+            Criteria c = session.createCriteria(persistentEntity.javaClass)
+            HibernateQuery hibernateQuery = new HibernateQuery(c,new HibernateSession((HibernateDatastore)datastore, sessionFactory), persistentEntity) {}
+            hibernateTemplate.applySettings c
+
+            params = params ? new HashMap(params) : Collections.emptyMap()
+            setResultTransformer(c)
+            if(params.containsKey(DynamicFinder.ARGUMENT_MAX)) {
+                c.setMaxResults(Integer.MAX_VALUE)
+                GrailsHibernateQueryUtils.populateArgumentsForCriteria(persistentEntity, c, params, datastore.mappingContext.conversionService, true)
+                return new PagedResultList(hibernateTemplate, hibernateQuery)
+            }
+            else {
+                GrailsHibernateQueryUtils.populateArgumentsForCriteria(persistentEntity, c, params, datastore.mappingContext.conversionService, true)
+                def results = hibernateQuery.listForCriteria()
+                return results
+            }
+        }
     }
 
     @Override
@@ -71,38 +92,13 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
         return GormEnhancer.findStaticApi(persistentClass, name)
     }
 
-    @Override
-    List<D> list(Map params = Collections.emptyMap()) {
-        hibernateTemplate.execute { Session session ->
-            Criteria c = session.createCriteria(persistentEntity.javaClass)
-            hibernateTemplate.applySettings c
-
-            params = params ? new HashMap(params) : Collections.emptyMap()
-            setResultTransformer(c)
-            if(params.containsKey(DynamicFinder.ARGUMENT_MAX)) {
-
-                c.setMaxResults(Integer.MAX_VALUE)
-                GrailsHibernateQueryUtils.populateArgumentsForCriteria(persistentEntity, c, params, datastore.mappingContext.conversionService, true)
-                return new PagedResultList(hibernateTemplate, c)
-            }
-            else {
-                GrailsHibernateQueryUtils.populateArgumentsForCriteria(persistentEntity, c, params, datastore.mappingContext.conversionService, true)
-                return c.list()
-            }
-        }
-    }
-
-    @CompileDynamic
-    protected void setResultTransformer(Criteria c) {
-        c.resultTransformer = Criteria.DISTINCT_ROOT_ENTITY
-    }
 
     @Override
     GrailsCriteria createCriteria() {
         def builder = new HibernateCriteriaBuilder(persistentClass, sessionFactory)
         builder.datastore = (AbstractHibernateDatastore)datastore
         builder.conversionService = conversionService
-        builder
+        return builder
     }
 
     @Override
@@ -126,15 +122,13 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
             populateQueryArguments(q, args)
             populateQueryWithNamedArguments(q, params)
 
-            return q.executeUpdate()
+            return withQueryEvents(q) {
+                q.executeUpdate()
+            }
         }
     }
 
-    /**
-     * @deprecated positional parameters are deprecated
-     */
     @Override
-    @Deprecated
     Integer executeUpdate(String query, Collection params, Map args) {
         def template = hibernateTemplate
         SessionFactory sessionFactory = this.sessionFactory
@@ -157,65 +151,48 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
                 }
             }
             populateQueryArguments(q, args)
-            return q.executeUpdate()
+            return withQueryEvents(q) {
+                q.executeUpdate()
+            }
+        }
+    }
+
+    protected <T> T withQueryEvents(Query query, Closure<T> callable) {
+        HibernateDatastore hibernateDatastore = (HibernateDatastore)datastore
+
+        def eventPublisher = hibernateDatastore.applicationEventPublisher
+
+        def hqlQuery = new HibernateHqlQuery(new HibernateSession(hibernateDatastore, sessionFactory), persistentEntity, query)
+        eventPublisher.publishEvent(new PreQueryEvent(hibernateDatastore, hqlQuery))
+
+        def result = callable.call()
+
+        eventPublisher.publishEvent(new PostQueryEvent(hibernateDatastore, hqlQuery, Collections.singletonList(result)))
+        return result
+    }
+
+    @Override
+    protected void firePostQueryEvent(Session session, Criteria criteria, Object result) {
+        if(result instanceof List) {
+            datastore.applicationEventPublisher.publishEvent( new PostQueryEvent(datastore, new HibernateQuery(criteria, persistentEntity), (List)result))
+        }
+        else {
+            datastore.applicationEventPublisher.publishEvent( new PostQueryEvent(datastore, new HibernateQuery(criteria, persistentEntity), Collections.singletonList(result)))
         }
     }
 
     @Override
-    Object withSession(Closure callable) {
-        GrailsHibernateTemplate template = new GrailsHibernateTemplate(sessionFactory, (HibernateDatastore)datastore)
-        template.setExposeNativeSession(false)
-        template.setApplyFlushModeOnlyToNonExistingTransactions(true)
-        hibernateTemplate.execute new GrailsHibernateTemplate.HibernateCallback() {
-            def doInHibernate(Session session) {
-                callable(session)
-            }
-        }
+    protected void firePreQueryEvent(Session session, Criteria criteria) {
+        datastore.applicationEventPublisher.publishEvent( new PreQueryEvent(datastore, new HibernateQuery(criteria, persistentEntity)))
     }
 
     @Override
-    @CompileStatic(TypeCheckingMode.SKIP)
-    def withNewSession(Closure callable) {
-        GrailsHibernateTemplate template  = new GrailsHibernateTemplate(sessionFactory, (HibernateDatastore)datastore)
-        template.setExposeNativeSession(false)
-        SessionHolder sessionHolder = (SessionHolder)TransactionSynchronizationManager.getResource(sessionFactory)
-        Session previousSession = sessionHolder?.session
-        Session newSession
-        boolean newBind = false
-        try {
-            template.allowCreate = true
-            newSession = sessionFactory.openSession()
-            if (sessionHolder == null) {
-                sessionHolder = new SessionHolder(newSession)
-                TransactionSynchronizationManager.bindResource(sessionFactory, sessionHolder)
-                newBind = true
-            }
-            else {
-                sessionHolder.@session = newSession
-            }
-
-            hibernateTemplate.execute new GrailsHibernateTemplate.HibernateCallback() {
-                def doInHibernate(Session session) {
-                    callable(session)
-                }
-            }
-        }
-        finally {
-            try {
-                if (newSession) {
-                    SessionFactoryUtils.closeSession(newSession)
-                }
-                if (newBind) {
-                    TransactionSynchronizationManager.unbindResource(sessionFactory)
-                }
-            }
-            finally {
-                if (previousSession) {
-                    sessionHolder.@session = previousSession
-                }
-            }
-        }
+    protected HibernateHqlQuery createHqlQuery(Session session, Query q) {
+        return new HibernateHqlQuery(new HibernateSession((HibernateDatastore)datastore, sessionFactory), persistentEntity, q)
     }
 
-
+    @CompileDynamic
+    protected void setResultTransformer(Criteria c) {
+        c.resultTransformer = Criteria.DISTINCT_ROOT_ENTITY
+    }
 }
