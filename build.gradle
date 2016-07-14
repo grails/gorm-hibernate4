@@ -252,6 +252,13 @@ subprojects { project ->
             }
         }
     }
+
+    if(isGrails2PluginProject) {
+        project.tasks.all { Task t ->
+            t.onlyIf { Boolean.getBoolean("grails2.plugin.enabled" )}
+        }
+    }
+
     if(!isGrails2PluginProject) {
         bintray {
 
