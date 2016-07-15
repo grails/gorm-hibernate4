@@ -30,8 +30,8 @@ import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 import org.grails.orm.hibernate.support.FlushOnRedirectEventListener
 import org.grails.orm.hibernate.validation.HibernateDomainClassValidator
+import org.grails.orm.hibernate4.support.AggregatePersistenceContextInterceptor
 import org.grails.orm.hibernate4.support.GrailsOpenSessionInViewInterceptor
-import org.grails.orm.hibernate5.support.AggregatePersistenceContextInterceptor
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.config.MethodInvokingFactoryBean
 import org.springframework.beans.factory.support.BeanDefinitionRegistry

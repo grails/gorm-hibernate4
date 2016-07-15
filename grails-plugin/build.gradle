@@ -15,7 +15,7 @@ dependencies {
 
     compileOnly("org.grails:grails-core:$grailsVersion")
     compileOnly("org.grails:grails-validation:$grailsVersion")
-    
+    compileOnly "org.grails:grails-plugin-testing:$grailsVersion"
     compile "org.hibernate:hibernate-core:${hibernateVersion}.Final"
     compile "org.grails:grails-datastore-web:$gormVersion"
     compile "org.grails:grails-datastore-simple:$gormVersion"
@@ -30,5 +30,12 @@ dependencies {
         exclude group:'org.grails', module:'grails-core'
         exclude group:'javax.transaction', module:'jta'
     }
+
+    testRuntime "com.h2database:h2:1.4.192"
+    testRuntime "org.apache.tomcat:tomcat-jdbc:8.5.0"
+    testRuntime "org.apache.tomcat.embed:tomcat-embed-logging-log4j:8.5.0"
+
+    testCompile("org.grails:grails-validation:$grailsVersion")
+    testCompile  "org.grails:grails-plugin-testing:$grailsVersion"
 }
 //compileGroovy.groovyOptions.forkOptions.jvmArgs = ['-verbose']
