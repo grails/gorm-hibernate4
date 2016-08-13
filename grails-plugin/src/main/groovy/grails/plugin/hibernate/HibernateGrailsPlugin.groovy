@@ -60,7 +60,6 @@ class HibernateGrailsPlugin extends Plugin {
         GrailsApplication grailsApplication = grailsApplication
         Config config = grailsApplication.config
 
-
         def domainClasses = grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE)
                                                 .findAll() { GrailsClass cls ->
                                                     GrailsDomainClass dc = (GrailsDomainClass)cls
@@ -71,10 +70,7 @@ class HibernateGrailsPlugin extends Plugin {
         def springInitializer = new HibernateDatastoreSpringInitializer((PropertyResolver)config, domainClasses)
         springInitializer.grailsPlugin = true
         dataSourceNames = springInitializer.dataSources
-        if(!Environment.isDevelopmentMode()) {
-            // set no-op for default DDL auto setting if not in development mode
-            springInitializer.ddlAuto = ''
-        }
+
         springInitializer.enableReload = Environment.isDevelopmentMode()
         springInitializer.registerApplicationIfNotPresent = false
         def beans = springInitializer.getBeanDefinitions((BeanDefinitionRegistry)applicationContext)
