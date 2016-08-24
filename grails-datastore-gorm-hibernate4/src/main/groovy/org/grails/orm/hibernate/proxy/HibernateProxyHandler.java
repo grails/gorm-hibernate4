@@ -16,7 +16,6 @@
 package org.grails.orm.hibernate.proxy;
 
 
-import org.hibernate.collection.internal.AbstractPersistentCollection;
 import org.hibernate.collection.spi.PersistentCollection;
 
 /**
@@ -28,7 +27,7 @@ import org.hibernate.collection.spi.PersistentCollection;
 public class HibernateProxyHandler extends SimpleHibernateProxyHandler {
 
     public boolean isInitialized(Object o) {
-        if (o instanceof PersistentCollection) {
+        if (isPersistentCollection(o)) {
             return ((PersistentCollection)o).wasInitialized();
         }
 
@@ -36,7 +35,7 @@ public class HibernateProxyHandler extends SimpleHibernateProxyHandler {
     }
 
     public Object unwrapIfProxy(Object instance) {
-        if (instance instanceof AbstractPersistentCollection) {
+        if (isPersistentCollection(instance)) {
             initialize(instance);
             return instance;
         }
@@ -45,16 +44,20 @@ public class HibernateProxyHandler extends SimpleHibernateProxyHandler {
     }
 
     public boolean isProxy(Object o) {
-        return super.isProxy(o) || (o instanceof AbstractPersistentCollection);
+        return super.isProxy(o) || isPersistentCollection(o);
     }
 
     public void initialize(Object o) {
-        if (o instanceof AbstractPersistentCollection) {
-            final AbstractPersistentCollection col = (AbstractPersistentCollection)o;
+        if (isPersistentCollection(o)) {
+            final PersistentCollection col = (PersistentCollection)o;
             if (!col.wasInitialized()) {
                 col.forceInitialization();
             }
         }
         super.initialize(o);
+    }
+
+    protected boolean isPersistentCollection(Object o) {
+        return (o instanceof PersistentCollection);
     }
 }
