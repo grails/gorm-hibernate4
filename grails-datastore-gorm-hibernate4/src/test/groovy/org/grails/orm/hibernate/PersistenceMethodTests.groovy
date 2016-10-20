@@ -824,7 +824,15 @@ class PersistenceMethodTests extends AbstractGrailsHibernateTests {
         namedArgs.namesList = namesList
         listResult = domainClass.executeQuery("select distinct p from PersistentMethodTests as p where p.firstName in (:namesList) order by p.firstName", namedArgs)
         assertEquals 2, listResult.size()
-        // test find with a query and named list params and paginate params
+
+        // test find with query and named list params
+        namedArgs.clear()
+        Set namesSet = ["wilma", "fred"]
+        namedArgs.namesList = namesSet
+        listResult = domainClass.executeQuery("select distinct p from PersistentMethodTests as p where p.firstName in (:namesList) order by p.firstName", namedArgs)
+        assertEquals 2, listResult.size()
+
+        // test find with a query and named liCst params and paginate params
         paginateParams.clear()
         paginateParams.max = 1
         listResult = domainClass.executeQuery("select distinct p from PersistentMethodTests as p where p.firstName in (:namesList) order by p.firstName", namedArgs, paginateParams)
