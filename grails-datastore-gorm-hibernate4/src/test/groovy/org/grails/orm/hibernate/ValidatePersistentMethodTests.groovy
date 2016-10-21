@@ -60,14 +60,14 @@ class ValidatePersistentMethodTests extends AbstractGrailsHibernateTests {
 
         author.address = address
 
-        assert book.validate()
+        assert !book.validate()
         assert !author.validate()
         assert book.validate(deepValidate:false)
 
         address.location = "Foo Bar"
 
-        assert book.validate()
         assert author.validate()
+        assert book.validate()
         assert book.validate(deepValidate:false)
     }
 
