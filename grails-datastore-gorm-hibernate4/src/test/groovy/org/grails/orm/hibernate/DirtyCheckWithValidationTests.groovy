@@ -21,7 +21,7 @@ class DirtyCheckWithValidationTests extends AbstractGrailsHibernateTests {
 
 
         DirtyCheckWithValidation.newInstance(name:"valid").save(flush:true)
-
+        session.clear()
         def test = DirtyCheckWithValidation.get(1)
         test.name = ''
         assertFalse test.validate()
@@ -37,7 +37,7 @@ class DirtyCheckWithValidationTests extends AbstractGrailsHibernateTests {
         session.setFlushMode FlushMode.AUTO
 
         DirtyCheckWithValidation.newInstance(name:"valid").save(flush:true)
-
+        session.clear()
         def test = DirtyCheckWithValidation.get(1)
         test.name = ''
         assertFalse test.validate()
