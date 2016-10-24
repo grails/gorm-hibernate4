@@ -40,6 +40,7 @@ import org.hibernate.tool.hbm2ddl.SchemaExport as HibernateSchemaExport
 class SchemaExportCommand implements ApplicationCommand {
 
     final String description = "Creates a DDL file of the database schema"
+    Boolean skipBootstrap = true
 
     @Override
     boolean handle(ExecutionContext executionContext) {
