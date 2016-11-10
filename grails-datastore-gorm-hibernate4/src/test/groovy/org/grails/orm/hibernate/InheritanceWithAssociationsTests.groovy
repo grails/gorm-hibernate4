@@ -1,99 +1,72 @@
 package org.grails.orm.hibernate
 
 import grails.persistence.Entity
-
+import grails.transaction.Rollback
 import org.junit.Test
-
-import static junit.framework.Assert.*
+import org.springframework.transaction.PlatformTransactionManager
+import spock.lang.AutoCleanup
+import spock.lang.Shared
+import spock.lang.Specification
 
 /**
  * @author Graeme Rocher
  */
-class InheritanceWithAssociationsTests extends AbstractGrailsHibernateTests {
+class InheritanceWithAssociationsTests extends Specification {
+    @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(InheritanceWithAssociationsA, InheritanceWithAssociationsLink, InheritanceWithAssociationsLinkToA, InheritanceWithAssociationsRoot)
+    @Shared PlatformTransactionManager transactionManager = hibernateDatastore.getTransactionManager()
 
-    @Test
-    void testMapping() {
 
-        def root = InheritanceWithAssociationsRoot.newInstance()
-        def a = InheritanceWithAssociationsA.newInstance()
-        def link = InheritanceWithAssociationsLinkToA.newInstance()
+
+    @Rollback
+    void "Test inheritance with association"() {
+
+        when:
+        InheritanceWithAssociationsRoot root = new InheritanceWithAssociationsRoot()
+        InheritanceWithAssociationsA a = new InheritanceWithAssociationsA()
+        InheritanceWithAssociationsLinkToA link = new InheritanceWithAssociationsLinkToA()
         link.a = a
-        link.root = root
         a.link = link
 
-        a.save()
+        a.save(flush:true)
 
         root.addToLinks(link)
-        root.save()
-        session.flush()
-        session.clear()
+        root.save(flush:true)
+        root.discard()
 
         root = InheritanceWithAssociationsRoot.get(1)
-        assertNotNull root
-        assertEquals 1, root.links.size()
 
-        link = root.links.iterator().next()
-        assertNotNull link
-        assertNotNull link.a
+        then:
+        root != null
+        root.links.size() == 1
+        root.links.iterator().next()
+        root.links.iterator().next().a
     }
 
-    @Override
-    protected getDomainClasses() {
-        [InheritanceWithAssociationsA, InheritanceWithAssociationsB, InheritanceWithAssociationsLink, InheritanceWithAssociationsLinkToA, InheritanceWithAssociationsLinkToB, InheritanceWithAssociationsRoot]
-    }
 }
 
 @Entity
-class InheritanceWithAssociationsA {
-    Long id
-    Long version
-    InheritanceWithAssociationsLinkToA link
+class InheritanceWithAssociationsRoot {
+    static hasMany = [links : InheritanceWithAssociationsLink]
 }
-
-@Entity
-class InheritanceWithAssociationsB {
-    Long id
-    Long version
-    InheritanceWithAssociationsLinkToB link
-}
-
 @Entity
 class InheritanceWithAssociationsLink {
-    Long id
-    Long version
-
-    static belongsTo = InheritanceWithAssociationsRoot
-
-    InheritanceWithAssociationsRoot root
+    static belongsTo = [root:InheritanceWithAssociationsRoot]
 
     static constraints = {
         root(nullable:true)
     }
 }
-
 @Entity
 class InheritanceWithAssociationsLinkToA extends InheritanceWithAssociationsLink {
-    Long id
-    Long version
-
-    static belongsTo = InheritanceWithAssociationsA
-    InheritanceWithAssociationsA a
+    static belongsTo = [a:InheritanceWithAssociationsA]
 }
 
 @Entity
-class InheritanceWithAssociationsLinkToB {
-    Long id
-    Long version
-
-    static belongsTo = InheritanceWithAssociationsB
-    InheritanceWithAssociationsB b
+class InheritanceWithAssociationsA {
+    InheritanceWithAssociationsLinkToA link
 }
 
-@Entity
-class InheritanceWithAssociationsRoot {
-    Long id
-    Long version
 
-    Set links
-    static hasMany = [links : InheritanceWithAssociationsLink]
-}
+
+
+
