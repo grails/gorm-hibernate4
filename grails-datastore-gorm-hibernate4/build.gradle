@@ -77,10 +77,14 @@ dependencies {
     testCompile "org.hibernate:hibernate-ehcache:$hibVersion"
 
     compileOnly "javax.servlet:javax.servlet-api:$servletApiVersion"
+    testRuntime "org.slf4j:slf4j-simple:1.7.10"
+    testRuntime "org.slf4j:jcl-over-slf4j:1.7.10"
 
     def tomcatVersion = '7.0.50'
     testCompile "org.apache.tomcat:tomcat-jdbc:$tomcatVersion"
     testRuntime "org.apache.tomcat.embed:tomcat-embed-logging-log4j:$tomcatVersion"
+    testRuntime "org.slf4j:slf4j-simple:1.7.10"
+    testRuntime "org.slf4j:jcl-over-slf4j:1.7.10"
 
 }
 
