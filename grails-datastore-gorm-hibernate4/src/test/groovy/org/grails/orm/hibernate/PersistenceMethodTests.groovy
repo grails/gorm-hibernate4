@@ -156,11 +156,13 @@ class PersistenceMethodTests extends AbstractGrailsHibernateTests {
         assertNotNull returnValue
 
         // test with a GString query
-        b.setVariable("className","PersistentMethodTests")
-        gs = new GroovyShell(b).evaluate("\"from \${className} where firstName like ? and lastName like ?\"")
+        shouldFail(GrailsQueryException) {
 
-        returnValue = domainClass.find(gs, params)
-        assertNotNull returnValue
+            b.setVariable("className","PersistentMethodTests")
+            gs = new GroovyShell(b).evaluate("\"from \${className} where firstName like ? and lastName like ?\"")
+
+            returnValue = domainClass.find(gs, params)
+        }
 
         // test find with query and named params
         namedArgs.clear()
@@ -569,9 +571,11 @@ class PersistenceMethodTests extends AbstractGrailsHibernateTests {
 
         // test with a GString query
         b.setVariable("className","PersistentMethodTests")
-        gs = new GroovyShell(b).evaluate("\"from \${className} where firstName like ? and lastName like ?\"")
-        returnValue = domainClass.findAll(gs, args)
-        assertNotNull returnValue
+        // should fail with unsafe query exception
+        shouldFail(GrailsQueryException) {
+            gs = new GroovyShell(b).evaluate("\"from \${className} where firstName like ? and lastName like ?\"")
+            returnValue = domainClass.findAll(gs, args)
+        }
 
         // test find with query and named list params
         namedArgs.clear()
