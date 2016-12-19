@@ -1,9 +1,8 @@
 package org.grails.orm.hibernate
 
 import grails.persistence.Entity
-
-import org.codehaus.groovy.grails.validation.AbstractConstraint
-import org.codehaus.groovy.grails.validation.ConstrainedProperty
+import grails.validation.AbstractConstraint
+import grails.validation.ConstrainedProperty
 import org.junit.Before
 import org.junit.Test
 import org.springframework.validation.Errors

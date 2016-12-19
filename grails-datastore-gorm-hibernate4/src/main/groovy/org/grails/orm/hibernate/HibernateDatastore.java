@@ -229,7 +229,15 @@ public class HibernateDatastore extends AbstractHibernateDatastore  {
     public HibernateDatastore(Map<String,Object> configuration, Package...packagesToScan) {
         this(DatastoreUtils.createPropertyResolver(configuration), packagesToScan);
     }
-
+    /**
+     * Construct a Hibernate datastore scanning the given packages
+     *
+     * @param configuration The configuration
+     * @param classes The classes
+     */
+    public HibernateDatastore(Map<String,Object> configuration, Class...classes) {
+        this(DatastoreUtils.createPropertyResolver(configuration), classes);
+    }
     /**
      * Construct a Hibernate datastore scanning the given packages
      *

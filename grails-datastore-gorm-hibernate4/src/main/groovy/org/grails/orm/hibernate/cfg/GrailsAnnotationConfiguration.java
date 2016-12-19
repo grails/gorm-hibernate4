@@ -236,7 +236,7 @@ public class GrailsAnnotationConfiguration extends Configuration implements Grai
      */
     private void configureNamingStrategy() {
         NamingStrategy strategy = null;
-        Object customStrategy = grailsApplication.getFlatConfig().get("hibernate.naming_strategy");
+        Object customStrategy = grailsApplication.getConfig().getProperty("hibernate.naming_strategy", Object.class, null);
         if (customStrategy != null) {
             Class<?> namingStrategyClass = null;
             if (customStrategy instanceof Class<?>) {

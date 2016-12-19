@@ -2,9 +2,6 @@ package org.grails.orm.hibernate
 
 import grails.persistence.Entity
 
-import org.codehaus.groovy.grails.validation.ConstrainedProperty
-import org.grails.datastore.gorm.validation.constraints.UniqueConstraintFactory
-//import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.junit.Test
 
 import static junit.framework.Assert.*
