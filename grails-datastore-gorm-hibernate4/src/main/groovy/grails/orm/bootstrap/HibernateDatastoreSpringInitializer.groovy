@@ -22,6 +22,7 @@ import org.grails.datastore.gorm.support.AbstractDatastorePersistenceContextInte
 import org.grails.datastore.gorm.support.DatastorePersistenceContextInterceptor
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.grailsversion.GrailsVersion
 import org.grails.datastore.mapping.validation.BeanFactoryValidatorRegistry
 import org.grails.orm.hibernate.GrailsHibernateTransactionManager
 import org.grails.orm.hibernate.HibernateDatastore
@@ -192,13 +193,22 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
                 }
             }
 
+            //Configure the dataSource bean if grails is not present or the grails version is less than 3.3.x
+            boolean shouldConfigureDataSourceBean = !isGrailsPresent
+            if (isGrailsPresent) {
+                def currentVersion = GrailsVersion.current
+                shouldConfigureDataSourceBean = currentVersion == null || new GrailsVersion("3.3.0.M1") <= currentVersion
+            }
+
             for(dataSourceName in dataSources) {
 
                 boolean isDefault = dataSourceName == Settings.SETTING_DATASOURCE || dataSourceName == ConnectionSource.DEFAULT
                 String suffix = isDefault ? '' : "_$dataSourceName"
                 String beanName = isDefault ? Settings.SETTING_DATASOURCE : "dataSource_$dataSourceName"
 
-                "$beanName"(DataSourceFactoryBean, ref("hibernateDatastore"), isDefault ? ConnectionSource.DEFAULT : dataSourceName)
+                if (shouldConfigureDataSourceBean) {
+                    "$beanName"(DataSourceFactoryBean, ref("hibernateDatastore"), isDefault ? ConnectionSource.DEFAULT : dataSourceName)
+                }
 
                 if(isDefault) continue
 
