@@ -18,7 +18,6 @@ dependencies {
     compileOnly "org.grails:grails-plugin-testing:$grailsVersion"
     compile "org.hibernate:hibernate-core:${hibernateVersion}.Final"
     compile "org.grails:grails-datastore-web:$gormVersion"
-    compile "org.grails:grails-datastore-simple:$gormVersion"
     compile "org.grails:grails-datastore-gorm-support:$gormVersion"
     compile project(":grails-datastore-gorm-hibernate4"), {
         exclude group:'org.springframework', module:'spring-context'
