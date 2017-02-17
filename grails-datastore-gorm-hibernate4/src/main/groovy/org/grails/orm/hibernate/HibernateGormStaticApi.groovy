@@ -190,7 +190,6 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
     }
 
     @Override
-    @Override
     protected HibernateHqlQuery createHqlQuery(Session session, Query q) {
         HibernateSession hibernateSession = new HibernateSession((HibernateDatastore) datastore, sessionFactory)
         FlushMode hibernateMode = session.getFlushMode()
