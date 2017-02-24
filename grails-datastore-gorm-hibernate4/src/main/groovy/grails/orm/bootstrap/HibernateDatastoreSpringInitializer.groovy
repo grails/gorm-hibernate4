@@ -23,6 +23,7 @@ import org.grails.datastore.gorm.support.DatastorePersistenceContextInterceptor
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.grailsversion.GrailsVersion
+import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.validation.BeanFactoryValidatorRegistry
 import org.grails.orm.hibernate.GrailsHibernateTransactionManager
 import org.grails.orm.hibernate.HibernateDatastore
@@ -154,7 +155,9 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
 
 
             def config = this.configuration
-            final boolean isGrailsPresent = isGrailsPresent()
+            boolean isGrailsPresent = isGrailsPresent()
+            // for newer versions of Grails (3.3 and above) the validation is provided by GORM
+            boolean isNewVersion = GrailsVersion.isAtLeastMajorMinor(3,3)
             hibernateConnectionSourceFactory(HibernateConnectionSourceFactory, persistentClasses as Class[]) { bean ->
                 bean.autowire = true
             }
@@ -166,22 +169,27 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
 
             // domain model mapping context, used for configuration
             grailsDomainClassMappingContext(hibernateDatastore:"getMappingContext") {
-                if(isGrailsPresent && (beanDefinitionRegistry instanceof BeanFactory)) {
+                if(!isNewVersion && isGrailsPresent && (beanDefinitionRegistry instanceof BeanFactory)) {
                     validatorRegistry = new BeanFactoryValidatorRegistry((BeanFactory)beanDefinitionRegistry)
                 }
             }
 
             if(isGrailsPresent) {
                 // override Validator beans with Hibernate aware instances
-                for(cls in persistentClasses) {
-                    "${cls.name}Validator"(HibernateDomainClassValidator) {
-                        proxyHandler = ref("hibernateProxyHandler")
-                        messageSource = ref("messageSource")
-                        domainClass = ref("${cls.name}DomainClass")
-                        grailsApplication = ref('grailsApplication')
-                        mappingContext = ref("grailsDomainClassMappingContext")
+                if(!isNewVersion && ClassUtils.isPresent("org.grails.orm.hibernate.validation.HibernateDomainClassValidator")) {
+                    ClassLoader cl = ClassUtils.getClassLoader()
+                    Class hibernateValidatorClass = cl.loadClass("org.grails.orm.hibernate.validation.HibernateDomainClassValidator")
+                    for(cls in persistentClasses) {
+                        "${cls.name}Validator"(hibernateValidatorClass) {
+                            proxyHandler = ref("hibernateProxyHandler")
+                            messageSource = ref("messageSource")
+                            domainClass = ref("${cls.name}DomainClass")
+                            grailsApplication = ref('grailsApplication')
+                            mappingContext = ref("grailsDomainClassMappingContext")
+                        }
                     }
                 }
+
                 boolean osivEnabled = config.getProperty("hibernate.osiv.enabled", Boolean, true)
                 boolean isWebApplication = beanDefinitionRegistry?.containsBeanDefinition("dispatcherServlet") ||
                         beanDefinitionRegistry?.containsBeanDefinition("grailsControllerHelper")
@@ -196,8 +204,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             //Configure the dataSource bean if grails is not present or the grails version is less than 3.3.x
             boolean shouldConfigureDataSourceBean = !isGrailsPresent
             if (isGrailsPresent) {
-                def currentVersion = GrailsVersion.current
-                shouldConfigureDataSourceBean = currentVersion == null || new GrailsVersion("3.3.0.M1") <= currentVersion
+                shouldConfigureDataSourceBean = isNewVersion
             }
 
             for(dataSourceName in dataSources) {
