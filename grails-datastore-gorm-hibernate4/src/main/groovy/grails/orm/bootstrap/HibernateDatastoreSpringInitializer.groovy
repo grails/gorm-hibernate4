@@ -23,16 +23,14 @@ import org.grails.datastore.gorm.support.DatastorePersistenceContextInterceptor
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.validation.BeanFactoryValidatorRegistry
-import org.grails.orm.hibernate.GrailsHibernateTransactionManager
 import org.grails.orm.hibernate.HibernateDatastore
-import org.grails.orm.hibernate.cfg.Settings
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
+import org.grails.orm.hibernate.support.HibernateDatastoreConnectionSourcesRegistrar
 import org.grails.orm.hibernate.validation.HibernateDomainClassValidator
 import org.grails.orm.hibernate4.support.AggregatePersistenceContextInterceptor
 import org.grails.orm.hibernate4.support.GrailsOpenSessionInViewInterceptor
 import org.springframework.beans.factory.BeanFactory
-import org.springframework.beans.factory.config.MethodInvokingFactoryBean
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ApplicationContext
 import org.springframework.context.support.GenericApplicationContext
@@ -41,6 +39,7 @@ import org.springframework.core.env.PropertyResolver
 import org.springframework.transaction.PlatformTransactionManager
 
 import javax.sql.DataSource
+
 /**
  * Class that handles the details of initializing GORM for Hibernate
  *
@@ -160,6 +159,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             sessionFactory(hibernateDatastore:'getSessionFactory')
             transactionManager(hibernateDatastore:"getTransactionManager")
             getBeanDefinition("transactionManager").beanClass = PlatformTransactionManager
+            hibernateDatastoreConnectionSourcesRegistrar(HibernateDatastoreConnectionSourcesRegistrar, dataSources)
             persistenceInterceptor(AggregatePersistenceContextInterceptor, ref("hibernateDatastore"))
 
             // domain model mapping context, used for configuration
@@ -189,39 +189,6 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
                         hibernateDatastore = ref("hibernateDatastore")
                     }
                 }
-            }
-
-            for(dataSourceName in dataSources) {
-
-                boolean isDefault = dataSourceName == Settings.SETTING_DATASOURCE || dataSourceName == ConnectionSource.DEFAULT
-                if(isDefault) continue
-
-                String suffix = '_' + dataSourceName
-                def sessionFactoryName = isDefault ? defaultSessionFactoryBeanName : "sessionFactory$suffix"
-                String datastoreBeanName = "hibernateDatastore$suffix"
-                "$datastoreBeanName"(MethodInvokingFactoryBean) {
-                    targetObject = ref("hibernateDatastore")
-                    targetMethod = "getDatastoreForConnection"
-                    arguments = [dataSourceName]
-                }
-                // the main SessionFactory bean
-                if(!beanDefinitionRegistry.containsBeanDefinition(sessionFactoryName)) {
-                    "$sessionFactoryName"((datastoreBeanName):"getSessionFactory")
-                }
-
-                String transactionManagerBeanName = "transactionManager$suffix"
-
-                if(grailsPlugin) {
-                    "$transactionManagerBeanName"(GrailsHibernateTransactionManager) {
-                        dataSource = ref("dataSource$suffix")
-                        sessionFactory = ref(sessionFactoryName)
-                    }
-                }
-                else {
-                    "$transactionManagerBeanName"((datastoreBeanName):"getTransactionManager")
-                    getBeanDefinition(transactionManagerBeanName).beanClass = PlatformTransactionManager
-                }
-
             }
 
 
