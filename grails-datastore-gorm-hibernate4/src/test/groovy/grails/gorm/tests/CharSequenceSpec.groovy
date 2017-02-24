@@ -1,6 +1,7 @@
 package grails.gorm.tests
 
 import grails.persistence.Entity
+import groovy.transform.CompileStatic
 
 /**
  * Created by graemerocher on 14/04/14.
@@ -28,10 +29,15 @@ class CharSequenceSpec extends GormDatastoreSpec{
                 SomeDomainClass.findWhere(name:queryArg)
                 SomeDomainClass.findAllWhere(name:queryArg)
                 SomeDomainClass.withCriteria{ eq 'name',queryArg }
-                SomeDomainClass.find("from SomeDomainClass s where s.name = ?", [queryArg])
+                executeQuery(queryArg)
                 SomeDomainClass.findAll("from SomeDomainClass s where s.name = ?", [queryArg])
                 SomeDomainClass.executeQuery("from SomeDomainClass s where s.name = ?", [queryArg])
 
+    }
+
+    @CompileStatic
+    public SomeDomainClass executeQuery(GString queryArg) {
+        SomeDomainClass.find("from SomeDomainClass s where s.name = ?", [queryArg])
     }
 
     @Override
