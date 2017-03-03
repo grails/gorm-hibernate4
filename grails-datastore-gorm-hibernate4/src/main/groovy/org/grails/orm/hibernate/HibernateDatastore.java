@@ -125,59 +125,16 @@ public class HibernateDatastore extends AbstractHibernateDatastore  {
                 if(this.tenantResolver instanceof AllTenantsResolver) {
                     AllTenantsResolver allTenantsResolver = (AllTenantsResolver) tenantResolver;
                     Iterable<Serializable> tenantIds = allTenantsResolver.resolveTenantIds();
-                    HibernateConnectionSourceFactory factory = (HibernateConnectionSourceFactory) connectionSources.getFactory();
 
                     for (Serializable tenantId : tenantIds) {
-                        HibernateConnectionSourceSettings settings;
-                        try {
-                            settings = connectionSources.getDefaultConnectionSource().getSettings().clone();
-                        } catch (CloneNotSupportedException e) {
-                            throw new ConfigurationException("Couldn't clone default Hibernate settings! " + e.getMessage(), e);
-                        }
-                        String schemaName = tenantId.toString();
-                        DefaultConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource = new DefaultConnectionSource<>(schemaName, defaultConnectionSource.getDataSource(), settings.getDataSource());
-                        settings.getHibernate().put("default_schema", schemaName);
-
-                        String dbCreate = settings.getDataSource().getDbCreate();
-
-                        if(dbCreate != null && Arrays.asList("update", "create", "create-drop").contains(dbCreate)) {
-
-                            Connection connection = null;
-                            try {
-                                connection = defaultConnectionSource.getDataSource().getConnection();
-                                try {
-                                    schemaHandler.useSchema(connection, schemaName);
-                                } catch (Exception e) {
-                                    // schema doesn't exist
-                                    schemaHandler.createSchema(connection, schemaName);
-                                }
-                            } catch (SQLException e) {
-                                throw new DatastoreConfigurationException(String.format("Failed to create schema for name [%s]", schemaName));
-                            }
-                            finally {
-                                if(connection != null) {
-                                    try {
-                                        connection.close();
-                                    } catch (SQLException e) {
-                                        //ignore
-                                    }
-                                }
-                            }
-                        }
-
-                        ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource = factory.create(schemaName, dataSourceConnectionSource, settings);
-                        SingletonConnectionSources<SessionFactory, HibernateConnectionSourceSettings>  singletonConnectionSources = new SingletonConnectionSources(connectionSource, connectionSources.getBaseConfiguration());
-                        HibernateDatastore childDatastore = new HibernateDatastore(singletonConnectionSources, mappingContext, eventPublisher) {
-                            @Override
-                            protected HibernateGormEnhancer initialize() {
-                                return null;
-                            }
-                        };
-                        datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
+                        addTenantForSchemaInternal(tenantId.toString());
                     }
                 }
                 else {
-                    throw new ConfigurationException("Configured TenantResolver must implement interface AllTenantsResolver in mode SCHEMA");
+                    Collection<String> allSchemas = schemaHandler.resolveSchemaNames(defaultConnectionSource.getDataSource());
+                    for (String schema : allSchemas) {
+                        addTenantForSchemaInternal(schema);
+                    }
                 }
             }
         }
@@ -294,15 +251,30 @@ public class HibernateDatastore extends AbstractHibernateDatastore  {
     }
 
     protected HibernateGormEnhancer initialize() {
+        final HibernateConnectionSource defaultConnectionSource = (HibernateConnectionSource) getConnectionSources().getDefaultConnectionSource();
         if(multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
             return new HibernateGormEnhancer(this, transactionManager, getConnectionSources().getDefaultConnectionSource().getSettings()) {
                 @Override
                 public List<String> allQualifiers(Datastore datastore, PersistentEntity entity) {
                     List<String> allQualifiers = super.allQualifiers(datastore, entity);
                     if( MultiTenant.class.isAssignableFrom(entity.getJavaClass()) ) {
-                        Iterable<Serializable> tenantIds = ((AllTenantsResolver) tenantResolver).resolveTenantIds();
-                        for (Serializable tenantId : tenantIds) {
-                            allQualifiers.add(tenantId.toString());
+                        if(tenantResolver instanceof AllTenantsResolver) {
+                            Iterable<Serializable> tenantIds = ((AllTenantsResolver) tenantResolver).resolveTenantIds();
+                            for(Serializable id : tenantIds) {
+                                allQualifiers.add(id.toString());
+                            }
+                        }
+                        else {
+                            Collection<String> schemaNames = schemaHandler.resolveSchemaNames(defaultConnectionSource.getDataSource());
+                            for (String schemaName : schemaNames) {
+                                // skip common internal schemas
+                                if(schemaName.equals("INFORMATION_SCHEMA") || schemaName.equals("PUBLIC")) continue;
+                                for (String connectionName : datastoresByConnectionSource.keySet()) {
+                                    if(schemaName.equalsIgnoreCase(connectionName)) {
+                                        allQualifiers.add(connectionName);
+                                    }
+                                }
+                            }
                         }
                     }
                     return allQualifiers;
@@ -418,5 +390,67 @@ public class HibernateDatastore extends AbstractHibernateDatastore  {
             GrailsDomainBinder.clearMappingCache();
             this.gormEnhancer.close();
         }
+    }
+
+    @Override
+    public void addTenantForSchema(String schemaName) {
+        addTenantForSchemaInternal(schemaName);
+        for (PersistentEntity persistentEntity : mappingContext.getPersistentEntities()) {
+            gormEnhancer.registerEntity(persistentEntity);
+        }
+
+    }
+
+    private void addTenantForSchemaInternal(String schemaName) {
+        if( multiTenantMode != MultiTenancySettings.MultiTenancyMode.SCHEMA ) {
+            throw new ConfigurationException("The method [addTenantForSchema] can only be called with multi-tenancy mode SCHEMA. Current mode is: " + multiTenantMode);
+        }
+        HibernateConnectionSourceFactory factory = (HibernateConnectionSourceFactory) connectionSources.getFactory();
+        HibernateConnectionSource defaultConnectionSource = (HibernateConnectionSource) connectionSources.getDefaultConnectionSource();
+        HibernateConnectionSourceSettings tenantSettings;
+        try {
+            tenantSettings = connectionSources.getDefaultConnectionSource().getSettings().clone();
+        } catch (CloneNotSupportedException e) {
+            throw new ConfigurationException("Couldn't clone default Hibernate settings! " + e.getMessage(), e);
+        }
+        tenantSettings.getHibernate().put("default_schema", schemaName);
+
+        String dbCreate = tenantSettings.getDataSource().getDbCreate();
+
+        if(dbCreate != null && Arrays.asList("update", "create", "create-drop").contains(dbCreate)) {
+
+            Connection connection = null;
+            try {
+                connection = defaultConnectionSource.getDataSource().getConnection();
+                try {
+                    schemaHandler.useSchema(connection, schemaName);
+                } catch (Exception e) {
+                    // schema doesn't exist
+                    schemaHandler.createSchema(connection, schemaName);
+                }
+            } catch (SQLException e) {
+                throw new DatastoreConfigurationException(String.format("Failed to create schema for name [%s]", schemaName));
+            }
+            finally {
+                if(connection != null) {
+                    try {
+                        connection.close();
+                    } catch (SQLException e) {
+                        //ignore
+                    }
+                }
+            }
+        }
+
+        DefaultConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource = new DefaultConnectionSource<>(schemaName, defaultConnectionSource.getDataSource(), tenantSettings.getDataSource());
+        ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource = factory.create(schemaName, dataSourceConnectionSource, tenantSettings);
+        SingletonConnectionSources<SessionFactory, HibernateConnectionSourceSettings> singletonConnectionSources = new SingletonConnectionSources<>(connectionSource, connectionSources.getBaseConfiguration());
+        HibernateDatastore childDatastore = new HibernateDatastore(singletonConnectionSources, (HibernateMappingContext) mappingContext, eventPublisher) {
+            @Override
+            protected HibernateGormEnhancer initialize() {
+                return null;
+            }
+        };
+        datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
     }
 }

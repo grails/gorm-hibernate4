@@ -12,7 +12,6 @@ class LastUpdateWithDynamicUpdateSpec extends GormSpec {
         [LastUpdateTestA, LastUpdateTestB, LastUpdateTestC]
     }
 
-    @NotYetImplemented
     void "lastUpdated should work for dynamic update and no versioning on TestA"() {
         given:
         def a = new LastUpdateTestA(name: 'David Estes')
@@ -28,7 +27,6 @@ class LastUpdateWithDynamicUpdateSpec extends GormSpec {
         a.lastUpdated > lastUpdated
     }
 
-    @NotYetImplemented
     void "lastUpdated should work for dynamic update with version true TestB"() {
         given:
         def a = new LastUpdateTestB(name: 'David Estes')
