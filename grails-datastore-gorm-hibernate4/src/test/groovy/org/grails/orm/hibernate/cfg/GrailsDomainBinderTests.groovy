@@ -86,6 +86,7 @@ class Bagged {
     Long version
     String description
 }
+@grails.persistence.Entity
 class Bagger {
     Long id
     Long version

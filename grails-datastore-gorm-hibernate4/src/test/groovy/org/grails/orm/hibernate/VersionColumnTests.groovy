@@ -1,5 +1,7 @@
 package org.grails.orm.hibernate
 
+import grails.gorm.annotation.Entity
+
 import static junit.framework.Assert.*
 import org.junit.Test
 
@@ -34,6 +36,7 @@ class VersionColumnTests extends AbstractGrailsHibernateTests {
     }
 }
 
+@Entity
 class VersionColumnBook {
     Long id
     Long version
@@ -44,7 +47,7 @@ class VersionColumnBook {
     }
 }
 
-
+@Entity
 class BigLongVersion {
     Long id
     Long version

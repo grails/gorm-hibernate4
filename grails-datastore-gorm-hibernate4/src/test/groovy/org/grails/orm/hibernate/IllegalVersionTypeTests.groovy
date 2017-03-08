@@ -1,5 +1,6 @@
 package org.grails.orm.hibernate
 
+import grails.gorm.annotation.Entity
 import org.hibernate.type.IntegerType
 import org.hibernate.type.LongType
 import org.hibernate.type.TimestampType
@@ -58,36 +59,42 @@ class IllegalVersionTypeTests extends AbstractGrailsHibernateTests {
     }
 }
 
+@Entity
 class StringVersion {
     Long id
     String version
     String name
 }
 
+@Entity
 class BooleanVersion {
     Long id
     Boolean version
     String name
 }
 
+@Entity
 class DateVersion {
     Long id
     Date version
     String name
 }
 
+@Entity
 class TimestampVersion {
     Long id
     java.sql.Timestamp version
     String name
 }
 
+@Entity
 class LongVersion {
     Long id
     long version
     String name
 }
 
+@Entity
 class IntVersion {
     Long id
     int version

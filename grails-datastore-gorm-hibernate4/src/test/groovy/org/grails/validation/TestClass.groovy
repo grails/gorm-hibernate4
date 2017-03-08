@@ -1,8 +1,6 @@
-package org.grails.validation;
+package org.grails.validation
 
-import java.math.BigDecimal;
-import java.util.Collection;
-import java.util.Date;
+import grails.gorm.annotation.Entity
 
 /**
  * Simple test class for testing constraints.
@@ -10,7 +8,8 @@ import java.util.Date;
  * @author Sergey Nebolsin (<a href="mailto:nebolsin@gmail.com"/>)
  */
 @SuppressWarnings("rawtypes")
-public class TestClass {
+@Entity
+class TestClass {
 	private Long id;
 	private Long version;
 	private Object[] testArray;

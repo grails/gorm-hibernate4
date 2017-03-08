@@ -1,5 +1,6 @@
 package org.grails.orm.hibernate
 
+import grails.gorm.annotation.Entity
 import org.junit.Test
 
 /**
@@ -33,6 +34,7 @@ class TablePerSubclassIdentityMappingTests extends AbstractGrailsHibernateTests 
     }
 }
 
+@Entity
 class StationEvent {
     Long id
     Long version
@@ -44,6 +46,7 @@ class StationEvent {
     }
 }
 
+@Entity
 class PlateEvent extends StationEvent {
     String plate
     static mapping = {

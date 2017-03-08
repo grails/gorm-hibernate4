@@ -1,5 +1,6 @@
 package org.grails.orm.hibernate
 
+import grails.gorm.annotation.Entity
 import org.junit.Test
 
 /**
@@ -28,6 +29,7 @@ class TablePerSubclassWithCustomTableNameTests extends AbstractGrailsHibernateTe
     }
 }
 
+@Entity
 class Animal {
     Long id
     Long version
@@ -38,12 +40,15 @@ class Animal {
     }
 }
 
+@Entity
 class Dog extends Animal {
     String bark
     static mapping = {
         table "myDogs"
     }
 }
+
+@Entity
 class Cat extends Animal {
     String meow
     static mapping = {
