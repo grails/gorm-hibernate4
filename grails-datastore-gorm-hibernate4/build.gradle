@@ -21,9 +21,8 @@ dependencies {
     }
     compileOnly("org.grails:grails-datastore-web:$gormVersion")
 
-    String hibVersion = "${hibernateVersion}.Final"
 
-    compile("org.hibernate:hibernate-core:$hibVersion") {
+    compile("org.hibernate:hibernate-core:$hibernateVersion") {
         exclude group:'commons-logging', module:'commons-logging'
         exclude group:'com.h2database', module:'h2'
         exclude group:'commons-collections', module:'commons-collections'
@@ -48,7 +47,7 @@ dependencies {
         exclude group: 'commons-logging', module:'commons-logging'
     }
 
-    compileOnly ("org.hibernate:hibernate-ehcache:$hibVersion") {
+    compileOnly ("org.hibernate:hibernate-ehcache:$hibernateVersion") {
         exclude group:'commons-collections', module:'commons-collections'
         exclude group:'commons-logging', module:'commons-logging'
         exclude group:'com.h2database', module:'h2'
@@ -71,7 +70,7 @@ dependencies {
     testCompile "org.grails:grails-encoder:$grailsVersion"
 
     testCompile "net.sf.ehcache:ehcache-core:2.4.6"
-    testCompile "org.hibernate:hibernate-ehcache:$hibVersion"
+    testCompile "org.hibernate:hibernate-ehcache:$hibernateVersion"
 
     compileOnly "javax.servlet:javax.servlet-api:$servletApiVersion"
     testRuntime "org.slf4j:slf4j-simple:1.7.10"

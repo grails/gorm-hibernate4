@@ -58,7 +58,7 @@ dependencies {
         exclude group:'org.grails',module:'grails-async'
     }
 
-    runtime "org.hibernate:hibernate-ehcache:${hibernateVersion}.Final", {
+    runtime "org.hibernate:hibernate-ehcache:${hibernateVersion}", {
         exclude group: 'org.hibernate', module: 'hibernate-core'
         exclude group: 'org.jboss.logging', module:'jboss-logging'
     }
