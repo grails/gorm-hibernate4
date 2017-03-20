@@ -14,7 +14,7 @@ import org.gradle.api.internal.artifacts.publish.*
 apply plugin: "grails"
 
 grails {
-    grailsVersion = "2.5.5"
+    grailsVersion = rootProject.grails2Version
     groovyVersion = rootProject.groovyVersion
 }
 
@@ -25,7 +25,7 @@ configurations.all { Configuration c ->
     resolutionStrategy {
         eachDependency { DependencyResolveDetails details ->
             if(details.requested.group == 'org.grails' && !details.requested.name.startsWith('grails-datastore')) {
-                details.useVersion(grailsVersion)
+                details.useVersion(grails2Version)
             }
         }
     }

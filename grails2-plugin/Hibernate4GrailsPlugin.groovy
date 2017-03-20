@@ -25,7 +25,7 @@ import org.springframework.context.ApplicationContext
 import org.springframework.validation.Validator
 
 class Hibernate4GrailsPlugin {
-    def version = "6.0.9.BUILD-SNAPSHOT" // added by Gradle
+    def version = "6.1.0.RC2" // added by Gradle
     def license = "Apache 2.0 License"
     def organization = [name: "Grails", url: "http://grails.org/"]
     def developers = [
