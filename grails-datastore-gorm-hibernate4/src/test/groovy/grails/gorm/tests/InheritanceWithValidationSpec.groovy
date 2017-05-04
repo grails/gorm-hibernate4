@@ -26,13 +26,18 @@ class InheritanceWithValidationSpec extends GormDatastoreSpec{
 
             document = Document.get(document.id)
 
-            document.title.message = "Modified !"
+            document.title.message = "Modified !!!"
 
-            document.save(flush:true)
+        then:"The title is dirty"
+            document.title.hasChanged('message')
+
+        when:
+            document = document.save(flush:true)
             session.clear()
 
         then:"The update occurred correctly"
-            Document.get(document.id).title.message == 'Modified !'
+            document != null
+            Document.get(document.id).title.message == 'Modified !!!'
 
 
     }
@@ -61,5 +66,6 @@ class AbstractContent {
 }
 @Entity
 class ContentText extends AbstractContent {
+
     String message
 }
