@@ -86,7 +86,7 @@ class Hibernate4GrailsPlugin {
     }
 
     def onShutdown = { event ->
-        ConstrainedProperty.removeConstraint(UniqueConstraint.UNIQUE_CONSTRAINT, UniqueConstraint)
+        ConstrainedProperty.removeConstraint(UniqueConstraint.UNIQUE_CONSTRAINT, PersistentConstraintFactory)
     }
 
 

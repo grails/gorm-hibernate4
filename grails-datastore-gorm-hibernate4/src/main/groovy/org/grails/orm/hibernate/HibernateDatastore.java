@@ -84,6 +84,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore  {
         this.transactionManager = hibernateTransactionManager;
         this.eventPublisher = eventPublisher;
         this.eventTriggeringInterceptor = new EventTriggeringInterceptor(this);
+        this.autoTimestampEventListener = new AutoTimestampEventListener(this);
 
         HibernateConnectionSourceSettings.HibernateSettings hibernateSettings = defaultConnectionSource.getSettings().getHibernate();
 
@@ -243,7 +244,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore  {
     }
 
     protected void registerEventListeners(ConfigurableApplicationEventPublisher eventPublisher) {
-        eventPublisher.addApplicationListener(new AutoTimestampEventListener(this));
+        eventPublisher.addApplicationListener(autoTimestampEventListener);
         if(multiTenantMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
             eventPublisher.addApplicationListener(new MultiTenantEventListener());
         }
