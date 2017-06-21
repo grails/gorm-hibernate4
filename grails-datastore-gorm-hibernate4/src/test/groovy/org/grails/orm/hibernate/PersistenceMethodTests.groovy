@@ -115,12 +115,7 @@ class PersistenceMethodTests extends AbstractGrailsHibernateTests {
 
         obj.save()
 
-        // test invalid query
-        shouldFail(GrailsQueryException) {
-            domainClass.find("from AnotherClass")
-            fail("Should have thrown grails query exception")
-        }
-
+        
         // test find with HQL query
         List params = ["fre%"]
         def returnValue = domainClass.find("from PersistentMethodTests where firstName like ?", params)
@@ -501,11 +496,6 @@ class PersistenceMethodTests extends AbstractGrailsHibernateTests {
         obj2.setProperty("lastName", "flintstone")
 
         obj2.invokeMethod("save", null)
-
-        // test invalid query
-        shouldFail(GrailsQueryException) {
-            domainClass.findAll("from AnotherClass")
-        }
 
         // test find with a query
         def returnValue = domainClass.findAll("from PersistentMethodTests")
