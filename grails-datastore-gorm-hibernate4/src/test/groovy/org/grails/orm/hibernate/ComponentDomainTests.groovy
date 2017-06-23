@@ -25,6 +25,7 @@ class ComponentDomainTests extends AbstractGrailsHibernateTests {
     }
 }
 
+@grails.gorm.annotation.Entity
 class ComponentDomainPerson {
     Long id
     Long version
@@ -34,6 +35,8 @@ class ComponentDomainPerson {
 
     static embedded = ['homeAddress', 'workAddress']
 }
+
+@grails.gorm.annotation.Entity
 class ComponentDomainAddress {
     Long id
     Long version
