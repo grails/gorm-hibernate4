@@ -1,3 +1,5 @@
+.DS_Store
+grails2-plugin/plugin.xml
 .gradle
 build/
 .idea
