@@ -23,9 +23,9 @@ import org.hibernate.*;
 import org.hibernate.engine.jdbc.connections.internal.DatasourceConnectionProviderImpl;
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
 import org.hibernate.engine.spi.SessionImplementor;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.spi.EventSource;
 import org.hibernate.exception.GenericJDBCException;
-import org.hibernate.internal.SessionFactoryImpl;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
@@ -77,7 +77,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         if(sessionFactory instanceof SessionFactoryProxy) {
             sessionFactory = ((SessionFactoryProxy)sessionFactory).getCurrentSessionFactory();
         }
-        ConnectionProvider connectionProvider = ((SessionFactoryImpl) sessionFactory).getServiceRegistry().getService(ConnectionProvider.class);
+        ConnectionProvider connectionProvider = ((SessionFactoryImplementor) sessionFactory).getServiceRegistry().getService(ConnectionProvider.class);
         if(connectionProvider instanceof DatasourceConnectionProviderImpl) {
             jdbcExceptionTranslator = new SQLErrorCodeSQLExceptionTranslator(((DatasourceConnectionProviderImpl) connectionProvider).getDataSource());
         }
